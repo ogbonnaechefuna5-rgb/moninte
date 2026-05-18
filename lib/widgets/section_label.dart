@@ -9,12 +9,10 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 8, bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-      ),
+      child: Text(text, style: TextStyle(color: c.textSecondary, fontSize: 14)),
     );
   }
 }

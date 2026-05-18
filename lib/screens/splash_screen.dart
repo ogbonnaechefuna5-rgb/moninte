@@ -15,7 +15,7 @@ class _SplashScreenState extends State<SplashScreen> {
   int _step = 0;
 
   static const _screens = [
-    _Page('Spendalt', 'Your financial brain',
+    _Page('Moninte', 'Your financial brain',
         'AI-powered spending insights for Nigerian users',
         Icons.auto_awesome_rounded),
     _Page('One Place, All Accounts', 'Connect and monitor',
@@ -28,7 +28,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _next() {
     if (_step < _screens.length - 1) {
-      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _pageController.nextPage(
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
       widget.onComplete();
     }
@@ -42,8 +43,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -55,7 +57,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: _step < _screens.length - 1
                     ? TextButton(
                         onPressed: widget.onComplete,
-                        child: const Text('Skip', style: TextStyle(color: AppColors.textSecondary, decoration: TextDecoration.underline, decorationColor: AppColors.textSecondary)),
+                        child: Text('Skip',
+                            style: TextStyle(
+                                color: c.textSecondary,
+                                decoration: TextDecoration.underline,
+                                decorationColor: c.textSecondary)),
                       )
                     : const SizedBox(height: 40),
               ),
@@ -79,13 +85,25 @@ class _SplashScreenState extends State<SplashScreen> {
                           child: Icon(s.icon, size: 80, color: AppColors.accent),
                         ),
                         const SizedBox(height: 40),
-                        Text(s.title, style: Theme.of(context).textTheme.displayMedium, textAlign: TextAlign.center),
+                        Text(s.title,
+                            style: Theme.of(context).textTheme.displayMedium,
+                            textAlign: TextAlign.center),
                         const SizedBox(height: 12),
-                        Text(s.subtitle, style: const TextStyle(fontSize: 18, color: AppColors.accent, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+                        Text(s.subtitle,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w500),
+                            textAlign: TextAlign.center),
                         const SizedBox(height: 16),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(s.description, style: const TextStyle(fontSize: 16, color: AppColors.textSecondary, height: 1.5), textAlign: TextAlign.center),
+                          child: Text(s.description,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: c.textSecondary,
+                                  height: 1.5),
+                              textAlign: TextAlign.center),
                         ),
                         const Spacer(flex: 2),
                       ],
@@ -103,9 +121,12 @@ class _SplashScreenState extends State<SplashScreen> {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8, width: active ? 32 : 8,
+                  height: 8,
+                  width: active ? 32 : 8,
                   decoration: BoxDecoration(
-                    color: active ? AppColors.accent : AppColors.textSecondary.withValues(alpha: 0.3),
+                    color: active
+                        ? AppColors.accent
+                        : c.textSecondary.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -122,15 +143,21 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: ElevatedButton(
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent, foregroundColor: AppColors.background,
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: c.background,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_step == _screens.length - 1 ? 'Get Started' : 'Continue',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      Text(
+                          _step == _screens.length - 1
+                              ? 'Get Started'
+                              : 'Continue',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 16)),
                       const SizedBox(width: 8),
                       const Icon(Icons.arrow_forward, size: 20),
                     ],

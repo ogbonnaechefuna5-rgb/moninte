@@ -18,20 +18,21 @@ class AppInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: c.surfaceDark,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderDefault),
+        border: Border.all(color: c.borderDefault),
       ),
       child: TextField(
         controller: controller,
         obscureText: obscure,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        style: TextStyle(color: c.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textSecondary),
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textSecondary),
+          hintStyle: TextStyle(color: c.textSecondary),
+          prefixIcon: Icon(icon, size: 18, color: c.textSecondary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),

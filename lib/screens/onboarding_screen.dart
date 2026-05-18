@@ -85,8 +85,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -97,7 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   if (_currentStep > 0)
                     GestureDetector(
                       onTap: () => _goTo(_currentStep - 1),
-                      child: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary, size: 22),
+                      child: Icon(Icons.arrow_back_rounded, color: c.textPrimary, size: 22),
                     )
                   else
                     const SizedBox(width: 22),
@@ -105,7 +106,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   if (_currentStep < _totalSteps - 1)
                     GestureDetector(
                       onTap: widget.onComplete,
-                      child: const Text('Skip', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                      child: Text('Skip', style: TextStyle(color: c.textSecondary, fontSize: 14)),
                     ),
                 ]),
                 const SizedBox(height: 12),
@@ -113,7 +114,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
                     value: (_currentStep + 1) / _totalSteps,
-                    backgroundColor: AppColors.surfaceLight.withValues(alpha: 0.5),
+                    backgroundColor: c.surfaceLight.withValues(alpha: 0.5),
                     valueColor: const AlwaysStoppedAnimation(AppColors.accent),
                     minHeight: 3,
                   ),
@@ -180,7 +181,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     onPressed: _next,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.background,
+                      foregroundColor: c.background,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                     ),
@@ -206,13 +207,14 @@ class _NameStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const SizedBox(height: 20),
         Text('What should we\ncall you?', style: Theme.of(context).textTheme.displayMedium),
         const SizedBox(height: 8),
-        const Text("This is how you'll appear in the app", style: TextStyle(color: AppColors.textSecondary)),
+        Text("This is how you'll appear in the app", style: TextStyle(color: c.textSecondary)),
         const SizedBox(height: 40),
         Center(
           child: Container(
@@ -227,7 +229,7 @@ class _NameStep extends StatelessWidget {
             child: Center(
               child: Text(
                 initials.isEmpty ? '?' : initials,
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: AppColors.background),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: c.background),
               ),
             ),
           ),
@@ -237,10 +239,10 @@ class _NameStep extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(
             controller: controller,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
-            decoration: const InputDecoration(
+            style: TextStyle(color: c.textPrimary, fontSize: 16),
+            decoration: InputDecoration(
               hintText: 'e.g. Emmanuel Adeyemi',
-              hintStyle: TextStyle(color: AppColors.textSecondary),
+              hintStyle: TextStyle(color: c.textSecondary),
               border: InputBorder.none,
             ),
             onChanged: onChanged,

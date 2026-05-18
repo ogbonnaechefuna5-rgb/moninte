@@ -16,16 +16,16 @@ class PermissionsScreen extends StatefulWidget {
 class _PermissionsScreenState extends State<PermissionsScreen> {
   final List<Permission> _perms = [
     Permission(id: 'sms', icon: Icons.message_outlined, iconColor: Color(0xFFA8FF3E), title: 'SMS Detection', subtitle: 'Core feature',
-        description: 'Allows Spendalt to read incoming SMS messages from your bank to automatically detect and categorise transactions. Only bank-formatted SMS are parsed — personal messages are never read or stored.',
+        description: 'Allows Moninte to read incoming SMS messages from your bank to automatically detect and categorise transactions. Only bank-formatted SMS are parsed — personal messages are never read or stored.',
         enabled: true, required: true, status: 'granted'),
     Permission(id: 'notifications', icon: Icons.notifications_outlined, iconColor: Color(0xFFFFB830), title: 'Push Notifications', subtitle: 'Alerts & insights',
         description: 'Receive real-time alerts when you go over budget, when a new AI insight is ready, or when a transaction is detected.',
         enabled: true, required: false, status: 'granted'),
     Permission(id: 'biometric', icon: Icons.fingerprint, iconColor: Color(0xFFA8FF3E), title: 'Biometric Authentication', subtitle: 'Security',
-        description: 'Use your fingerprint or Face ID to unlock Spendalt instead of your PIN. Your biometric data stays on your device.',
+        description: 'Use your fingerprint or Face ID to unlock Moninte instead of your PIN. Your biometric data stays on your device.',
         enabled: true, required: false, status: 'granted'),
     Permission(id: 'background', icon: Icons.refresh, iconColor: Color(0xFF4DFF91), title: 'Background App Refresh', subtitle: 'Sync & freshness',
-        description: 'Allows Spendalt to sync your account data in the background so your balances are always up to date.',
+        description: 'Allows Moninte to sync your account data in the background so your balances are always up to date.',
         enabled: false, required: false, status: 'denied'),
     Permission(id: 'location', icon: Icons.location_on_outlined, iconColor: Color(0xFF8A9E90), title: 'Location (Optional)', subtitle: 'Merchant context',
         description: 'Used to enrich transaction details with merchant location info. Completely optional and only accessed when you open a transaction.',
@@ -45,10 +45,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final granted = _perms.where((p) => p.status == 'granted').length;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
@@ -66,17 +67,17 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             GlassCard(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: const [
-                  Icon(Icons.shield, size: 20, color: AppColors.accent),
-                  SizedBox(width: 8),
-                  Text('Permission health', style: TextStyle(color: AppColors.textPrimary)),
+                Row(children: [
+                  const Icon(Icons.shield, size: 20, color: AppColors.accent),
+                  const SizedBox(width: 8),
+                  Text('Permission health', style: TextStyle(color: c.textPrimary)),
                 ]),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: granted / _perms.length,
-                    backgroundColor: AppColors.surfaceLight,
+                    backgroundColor: c.surfaceLight,
                     valueColor: const AlwaysStoppedAnimation(AppColors.accent),
                     minHeight: 8,
                   ),
@@ -84,9 +85,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                 const SizedBox(height: 8),
                 Text(
                   granted == _perms.length
-                      ? 'All permissions granted — Spendalt runs at full power'
+                      ? 'All permissions granted — Moninte runs at full power'
                       : '${_perms.length - granted} permission${_perms.length - granted != 1 ? 's' : ''} not yet granted',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: c.textSecondary, fontSize: 12),
                 ),
               ]),
             ),
@@ -101,11 +102,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                 const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warning),
                 const SizedBox(width: 12),
                 Expanded(child: RichText(text: TextSpan(
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.5),
+                  style: TextStyle(color: c.textSecondary, fontSize: 12, height: 1.5),
                   children: [
                     const TextSpan(text: 'Permissions marked '),
                     TextSpan(text: 'Core feature', style: TextStyle(color: AppColors.accent)),
-                    const TextSpan(text: ' are required for Spendalt to work. Revoking them will disable key functionality.'),
+                    const TextSpan(text: ' are required for Moninte to work. Revoking them will disable key functionality.'),
                   ],
                 ))),
               ]),
@@ -131,7 +132,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         const SizedBox(width: 12),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Row(children: [
-                            Text(p.title, style: const TextStyle(color: AppColors.textPrimary)),
+                            Text(p.title, style: TextStyle(color: c.textPrimary)),
                             if (p.required) ...[
                               const SizedBox(width: 8),
                               Container(
@@ -145,9 +146,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                           Row(children: [
                             if (p.status == 'granted') const Icon(Icons.check_circle, size: 12, color: AppColors.success)
                             else if (p.status == 'denied') Container(width: 12, height: 12, decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.destructive.withValues(alpha: 0.6)))
-                            else Container(width: 12, height: 12, decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.textSecondary.withValues(alpha: 0.4))),
+                            else Container(width: 12, height: 12, decoration: BoxDecoration(shape: BoxShape.circle, color: c.textSecondary.withValues(alpha: 0.4))),
                             const SizedBox(width: 6),
-                            Text(p.status == 'not-asked' ? 'Not requested' : p.status, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                            Text(p.status == 'not-asked' ? 'Not requested' : p.status, style: TextStyle(color: c.textSecondary, fontSize: 12)),
                           ]),
                         ])),
                         // Toggle
@@ -159,7 +160,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         const SizedBox(width: 4),
                         GestureDetector(
                           onTap: () => setState(() => _expanded = isExpanded ? null : p.id),
-                          child: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 20, color: AppColors.textSecondary),
+                          child: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 20, color: c.textSecondary),
                         ),
                       ]),
                     ),
@@ -168,7 +169,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p.description, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5)),
+                          Text(p.description, style: TextStyle(color: c.textSecondary, fontSize: 14, height: 1.5)),
                           if (p.status == 'denied' || p.status == 'not-asked') ...[
                             const SizedBox(height: 12),
                             GestureDetector(
@@ -188,9 +189,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             }),
 
             const SizedBox(height: 8),
-            const Center(child: Text(
-              "You can also manage app permissions in your device's system Settings → Apps → Spendalt.",
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12), textAlign: TextAlign.center,
+            Center(child: Text(
+              "You can also manage app permissions in your device's system Settings → Apps → Moninte.",
+              style: TextStyle(color: c.textSecondary, fontSize: 12), textAlign: TextAlign.center,
             )),
           ],
         ),

@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// A reusable animated toggle switch used throughout the app.
-///
-/// [enabled] controls the on/off state.
-/// [onChanged] is called when the user taps the toggle.
-/// [locked] prevents interaction and dims the widget (e.g. for required permissions).
 class AppToggle extends StatelessWidget {
   final bool enabled;
   final VoidCallback onChanged;
@@ -20,6 +16,7 @@ class AppToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: locked ? null : onChanged,
       child: Opacity(
@@ -30,8 +27,8 @@ class AppToggle extends StatelessWidget {
           height: 26,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(13),
-            color: enabled ? AppColors.accent : AppColors.surfaceLight,
-            border: enabled ? null : Border.all(color: AppColors.borderDefault),
+            color: enabled ? AppColors.accent : c.surfaceLight,
+            border: enabled ? null : Border.all(color: c.borderDefault),
           ),
           child: AnimatedAlign(
             duration: const Duration(milliseconds: 200),

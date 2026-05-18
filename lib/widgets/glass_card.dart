@@ -41,17 +41,11 @@ class _GlassCardState extends State<GlassCard>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     if (widget.animate) {
       _controller.forward();
@@ -68,6 +62,8 @@ class _GlassCardState extends State<GlassCard>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     Widget card = ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -80,16 +76,15 @@ class _GlassCardState extends State<GlassCard>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.surfaceLight.withValues(alpha: 0.4),
-                    AppColors.surfaceDark.withValues(alpha: 0.6),
+                    c.surfaceLight.withValues(alpha: 0.4),
+                    c.surfaceDark.withValues(alpha: 0.6),
                   ],
                 ),
             borderRadius: BorderRadius.circular(16),
-            border: widget.border ??
-                Border.all(color: AppColors.borderDefault),
+            border: widget.border ?? Border.all(color: c.borderDefault),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Colors.black.withValues(alpha: c.isDark ? 0.2 : 0.08),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -101,18 +96,12 @@ class _GlassCardState extends State<GlassCard>
     );
 
     if (widget.onTap != null) {
-      card = GestureDetector(
-        onTap: widget.onTap,
-        child: card,
-      );
+      card = GestureDetector(onTap: widget.onTap, child: card);
     }
 
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: card,
-      ),
+      child: SlideTransition(position: _slideAnimation, child: card),
     );
   }
 }

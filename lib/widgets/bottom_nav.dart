@@ -21,12 +21,11 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.95),
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-        ),
+        color: c.background.withValues(alpha: 0.95),
+        border: Border(top: BorderSide(color: c.borderDefault)),
       ),
       child: SafeArea(
         top: false,
@@ -34,14 +33,11 @@ class BottomNav extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: _items.map((item) {
-              final isActive = active == item.id;
-              return _NavButton(
-                item: item,
-                isActive: isActive,
-                onTap: () => onNavigate(item.id),
-              );
-            }).toList(),
+            children: _items.map((item) => _NavButton(
+              item: item,
+              isActive: active == item.id,
+              onTap: () => onNavigate(item.id),
+            )).toList(),
           ),
         ),
       ),
@@ -62,6 +58,7 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -71,7 +68,6 @@ class _NavButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Active indicator bar
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               height: 2,
@@ -82,18 +78,12 @@ class _NavButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(1),
               ),
             ),
-            // Icon with optional glow
             Icon(
               item.icon,
               size: 22,
-              color: isActive ? AppColors.accent : AppColors.textSecondary,
+              color: isActive ? AppColors.accent : c.textSecondary,
               shadows: isActive
-                  ? [
-                      Shadow(
-                        color: AppColors.accent.withValues(alpha: 0.5),
-                        blurRadius: 8,
-                      )
-                    ]
+                  ? [Shadow(color: AppColors.accent.withValues(alpha: 0.5), blurRadius: 8)]
                   : null,
             ),
             const SizedBox(height: 2),
@@ -101,7 +91,7 @@ class _NavButton extends StatelessWidget {
               item.label,
               style: TextStyle(
                 fontSize: 10,
-                color: isActive ? AppColors.accent : AppColors.textSecondary,
+                color: isActive ? AppColors.accent : c.textSecondary,
               ),
             ),
           ],
@@ -115,10 +105,5 @@ class _NavItem {
   final String id;
   final String label;
   final IconData icon;
-
-  const _NavItem({
-    required this.id,
-    required this.label,
-    required this.icon,
-  });
+  const _NavItem({required this.id, required this.label, required this.icon});
 }

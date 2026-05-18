@@ -1,4 +1,3 @@
-/// A single financial transaction.
 class Transaction {
   final String merchant;
   final String category;
@@ -7,4 +6,7 @@ class Transaction {
   final String icon;
 
   const Transaction(this.merchant, this.category, this.amount, this.time, this.icon);
+
+  factory Transaction.fromJson(Map<String, dynamic> j) =>
+      Transaction(j['merchant'], j['category'], j['amount'], j['time'], j['icon']);
 }

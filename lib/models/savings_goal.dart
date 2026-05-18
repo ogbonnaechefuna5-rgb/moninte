@@ -1,4 +1,3 @@
-/// A savings goal tracked on the savings screen.
 class SavingsGoal {
   final int id;
   final String name;
@@ -6,7 +5,7 @@ class SavingsGoal {
   final int current;
   final int target;
   final String deadline;
-  final String status; // 'active' | 'completed'
+  final String status;
 
   const SavingsGoal({
     required this.id,
@@ -17,4 +16,14 @@ class SavingsGoal {
     required this.deadline,
     required this.status,
   });
+
+  factory SavingsGoal.fromJson(Map<String, dynamic> j) => SavingsGoal(
+        id: j['id'],
+        name: j['name'],
+        emoji: j['emoji'],
+        current: j['current'],
+        target: j['target'],
+        deadline: j['deadline'],
+        status: j['status'],
+      );
 }

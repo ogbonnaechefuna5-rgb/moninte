@@ -30,21 +30,22 @@ class _NotificationPaneState extends State<NotificationPane> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.surfaceLight, AppColors.surfaceDark],
+          colors: [c.surfaceLight, c.surfaceDark],
         ),
-        border: Border.all(color: AppColors.borderDefault),
+        border: Border.all(color: c.borderDefault),
       ),
       padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: Colors.white.withValues(alpha: 0.2))),
+          Container(width: 40, height: 4, decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: c.textSecondary.withValues(alpha: 0.3))),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -93,11 +94,11 @@ class _NotificationPaneState extends State<NotificationPane> {
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                          Text(n.title, style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: n.read ? FontWeight.w400 : FontWeight.w600)),
-                          Text(n.time, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                          Text(n.title, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: n.read ? FontWeight.w400 : FontWeight.w600)),
+                          Text(n.time, style: TextStyle(color: c.textSecondary, fontSize: 11)),
                         ]),
                         const SizedBox(height: 4),
-                        Text(n.body, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                        Text(n.body, style: TextStyle(color: c.textSecondary, fontSize: 13, height: 1.4)),
                       ])),
                       if (!n.read) ...[
                         const SizedBox(width: 8),

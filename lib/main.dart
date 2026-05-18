@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
+import 'providers/auth_provider.dart';
 import 'widgets/bottom_nav.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -24,8 +25,11 @@ class MoninteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
+      ],
       child: Consumer<ThemeProvider>(
         builder: (_, themeProvider, __) => MaterialApp(
           title: 'Moninte',
@@ -57,7 +61,10 @@ class _AppShellState extends State<AppShell> {
   void _completeSplash() {
     setState(() {
       _showSplash = false;
-      _showOnboarding = true;
+      final auth = context.read<AuthProvider>();
+      if (!auth.isLoggedIn) {
+        _showOnboarding = true;
+      }
     });
   }
 
@@ -91,10 +98,7 @@ class _AppShellState extends State<AppShell> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Main content
           _buildScreen(),
-
-          // Profile avatar button (hidden on sub-screens and profile)
           if (_activeScreen != 'profile' && !isSubScreen)
             Positioned(
               top: MediaQuery.of(context).padding.top + 12,
@@ -112,8 +116,6 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             ),
-
-          // Bottom nav (hidden on sub-screens)
           if (!isSubScreen)
             Positioned(
               left: 0, right: 0, bottom: 0,

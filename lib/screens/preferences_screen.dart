@@ -48,8 +48,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -57,7 +58,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
               children: [
                 // Header
-                ScreenHeader(title: 'Preferences', subtitle: 'Customise your Spendalt experience', onBack: widget.onBack),
+                ScreenHeader(title: 'Preferences', subtitle: 'Customise your Moninte experience', onBack: widget.onBack),
 
                 const SizedBox(height: 24),
 
@@ -141,7 +142,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
                       Text('App Version', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
                       SizedBox(height: 4),
-                      Text('Spendalt v1.0.0 — Build 2026.04', style: TextStyle(color: AppColors.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
+                      Text('Moninte v1.0.0 — Build 2026.04', style: TextStyle(color: AppColors.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
                     ])),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -168,6 +169,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   Widget _sectionLabel(String text) => SectionLabel(text);
 
   Widget _themeOption(String value, String label, IconData icon) {
+    final c = AppColors.of(context);
     final selected = _theme == value;
     return Expanded(
       child: GestureDetector(
@@ -177,13 +179,13 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? AppColors.accent.withValues(alpha: 0.15) : AppColors.surfaceDark.withValues(alpha: 0.4),
-            border: Border.all(color: selected ? AppColors.accent.withValues(alpha: 0.5) : AppColors.borderDefault),
+            color: selected ? AppColors.accent.withValues(alpha: 0.15) : c.surfaceDark.withValues(alpha: 0.4),
+            border: Border.all(color: selected ? AppColors.accent.withValues(alpha: 0.5) : c.borderDefault),
           ),
           child: Column(children: [
-            Icon(icon, size: 20, color: selected ? AppColors.accent : AppColors.textSecondary),
+            Icon(icon, size: 20, color: selected ? AppColors.accent : c.textSecondary),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(color: selected ? AppColors.accent : AppColors.textSecondary, fontSize: 12)),
+            Text(label, style: TextStyle(color: selected ? AppColors.accent : c.textSecondary, fontSize: 12)),
             if (selected) ...[
               const SizedBox(height: 6),
               Container(width: 6, height: 6, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent)),

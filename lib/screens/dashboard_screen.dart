@@ -4,268 +4,288 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/category_badge.dart';
 import '../widgets/notification_pane.dart';
-import '../models/transaction.dart';
-import '../models/budget_category.dart';
+import '../services/api_service.dart';
 import '../utils/formatters.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
-  static const _trendData = [45000.0, 52000.0, 48000.0, 61000.0, 55000.0, 67000.0, 58000.0];
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
 
-  static const _transactions = [
-    Transaction('Shoprite', 'Food', -12500, '2h ago', '🛒'),
-    Transaction('Bolt', 'Transport', -2800, '5h ago', '🚗'),
-    Transaction('Chicken Republic', 'Food', -4500, '1d ago', '🍗'),
-    Transaction('MTN Airtime', 'Airtime', -1000, '1d ago', '📱'),
-    Transaction('IKEDC Payment', 'Bills', -8500, '2d ago', '⚡'),
-  ];
+class _DashboardScreenState extends State<DashboardScreen> {
+  Map<String, dynamic>? _data;
+  bool _loading = true;
 
-  static const _budgets = [
-    BudgetCategory(category: 'Food', emoji: '', spent: 45000, total: 60000, color: Color(0xFFFF8C42), status: 'on-track'),
-    BudgetCategory(category: 'Transport', emoji: '', spent: 18000, total: 25000, color: Color(0xFF4D9FFF), status: 'on-track'),
-    BudgetCategory(category: 'Bills', emoji: '', spent: 32000, total: 40000, color: Color(0xFFA855F7), status: 'on-track'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await ApiService.getDashboard();
+      if (mounted) setState(() { _data = data; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: c.background,
+        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+      );
+    }
+
+    final netWorth = (_data?['netWorth'] as num?)?.toDouble() ?? 0;
+    final banks = (_data?['banks'] as List?)?.cast<String>() ?? [];
+    final thisMonth = (_data?['thisMonth'] as num?)?.toDouble() ?? 0;
+    final income = (_data?['income'] as num?)?.toDouble() ?? 0;
+    final savingsPct = (_data?['savingsPct'] as num?)?.toInt() ?? 0;
+    final monthChange = (_data?['monthChange'] as num?)?.toInt() ?? 0;
+    final incomeChange = (_data?['incomeChange'] as num?)?.toInt() ?? 0;
+    final savingsChange = (_data?['savingsChange'] as num?)?.toInt() ?? 0;
+    final trendData = (_data?['spendingTrend'] as List?)
+            ?.map((e) => (e as num).toDouble())
+            .toList() ??
+        [];
+    final transactions = (_data?['transactions'] as List?) ?? [];
+    final budgets = (_data?['budgets'] as List?) ?? [];
+    final aiInsight = _data?['aiInsight'] as String? ?? '';
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-          children: [
-            // Header
-            Row(
-              children: [
-                Expanded(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          color: AppColors.accent,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
+            children: [
+              Row(
+                children: [
+                  Image.asset('assets/images/moninte-logo.png', height: 36),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (_) => const NotificationPane(),
+                    ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: c.surfaceDark.withValues(alpha: 0.5),
+                            border: Border.all(color: c.borderDefault),
+                          ),
+                          child: Icon(Icons.notifications_outlined, size: 20, color: c.textSecondary),
+                        ),
+                        Positioned(
+                          top: 6, right: 6,
+                          child: Container(width: 8, height: 8, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.destructive)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Net Worth Card
+              GlassCard(
+                padding: const EdgeInsets.all(24),
+                animate: true,
+                child: Stack(
+                  children: [
+                    Positioned(top: -20, right: -20, child: Container(
+                      width: 128, height: 128,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.05)),
+                    )),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Net Worth', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        Text('₦${fmtNumber(netWorth.round())}', style: AppTheme.monoSized(34, weight: FontWeight.w700, color: c.textPrimary)),
+                        const SizedBox(height: 12),
+                        if (banks.isNotEmpty)
+                          Wrap(spacing: 8, children: banks.map((b) => _bankBadge(b)).toList()),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Stats row
+              Row(
+                children: [
+                  Expanded(child: _statCard(context, 'This Month', fmtCurrencyShort(thisMonth), Icons.trending_up, monthChange >= 0 ? AppColors.destructive : AppColors.success, '${monthChange >= 0 ? "+" : ""}$monthChange%')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _statCard(context, 'Income', fmtCurrencyShort(income), Icons.trending_up, incomeChange >= 0 ? AppColors.success : AppColors.destructive, '${incomeChange >= 0 ? "+" : ""}$incomeChange%')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _statCard(context, 'Savings', '$savingsPct%', savingsChange >= 0 ? Icons.trending_up : Icons.trending_down, savingsChange >= 0 ? AppColors.success : c.textSecondary, '${savingsChange >= 0 ? "+" : ""}$savingsChange%')),
+                ],
+              ),
+
+              // Spending Trend
+              if (trendData.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                GlassCard(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Good evening, Emmanuel 👋', style: Theme.of(context).textTheme.headlineLarge),
-                      const SizedBox(height: 4),
-                      const Text("Here's your financial overview", style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => showModalBottomSheet(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    isScrollControlled: true,
-                    builder: (_) => const NotificationPane(),
-                  ),
-                  child: Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.surfaceDark.withValues(alpha: 0.5),
-                          border: Border.all(color: AppColors.borderDefault),
-                        ),
-                        child: const Icon(Icons.notifications_outlined, size: 20, color: AppColors.textSecondary),
-                      ),
-                      Positioned(
-                        top: 6, right: 6,
-                        child: Container(width: 8, height: 8, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.destructive)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 40, height: 40,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [AppColors.accent, AppColors.primaryGreen]),
-                  ),
-                  child: const Center(child: Text('EA', style: TextStyle(color: AppColors.background, fontWeight: FontWeight.w600))),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Net Worth Card
-            GlassCard(
-              padding: const EdgeInsets.all(24),
-              animate: true,
-              child: Stack(
-                children: [
-                  Positioned(top: -20, right: -20, child: Container(
-                    width: 128, height: 128,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.05)),
-                  )),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Net Worth', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Text('₦847,350', style: AppTheme.monoSized(34, weight: FontWeight.w700)),
+                      Text('Spending Trend (7 days)', style: TextStyle(color: c.textSecondary, fontSize: 12)),
                       const SizedBox(height: 12),
-                      Wrap(spacing: 8, children: ['GTBank', 'Kuda', 'Opay'].map((b) => _bankBadge(b)).toList()),
+                      SizedBox(
+                        height: 60,
+                        child: LineChart(
+                          LineChartData(
+                            gridData: const FlGridData(show: false),
+                            titlesData: const FlTitlesData(show: false),
+                            borderData: FlBorderData(show: false),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: List.generate(trendData.length, (i) => FlSpot(i.toDouble(), trendData[i])),
+                                isCurved: true,
+                                color: AppColors.accent,
+                                barWidth: 2,
+                                dotData: const FlDotData(show: false),
+                                belowBarData: BarAreaData(show: false),
+                              ),
+                            ],
+                          ),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeInOut,
+                        ),
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // 3-column stats
-            Row(
-              children: [
-                Expanded(child: _statCard('This Month', '₦245K', Icons.trending_up, AppColors.destructive, '+12%')),
-                const SizedBox(width: 8),
-                Expanded(child: _statCard('Income', '₦450K', Icons.trending_up, AppColors.success, '+5%')),
-                const SizedBox(width: 8),
-                Expanded(child: _statCard('Savings', '45%', Icons.trending_down, AppColors.textSecondary, '-2%')),
+                ),
               ],
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // Spending Trend
-            GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Spending Trend (7 days)', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 60,
-                    child: LineChart(
-                      LineChartData(
-                        gridData: const FlGridData(show: false),
-                        titlesData: const FlTitlesData(show: false),
-                        borderData: FlBorderData(show: false),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: List.generate(_trendData.length, (i) => FlSpot(i.toDouble(), _trendData[i])),
-                            isCurved: true,
-                            color: AppColors.accent,
-                            barWidth: 2,
-                            dotData: const FlDotData(show: false),
-                            belowBarData: BarAreaData(show: false),
+              // Recent Transactions
+              if (transactions.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Recent Transactions', style: Theme.of(context).textTheme.titleMedium),
+                    Row(children: [
+                      Text('See all', style: TextStyle(color: AppColors.accent, fontSize: 14)),
+                      const Icon(Icons.chevron_right, color: AppColors.accent, size: 18),
+                    ]),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...transactions.map((tx) {
+                  final merchant = tx['merchant'] ?? 'Unknown';
+                  final category = tx['category'] ?? 'Other';
+                  final amount = (tx['amount'] as num).toDouble();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: GlassCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: c.surfaceLight),
+                            child: Center(child: Text(_categoryIcon(category), style: const TextStyle(fontSize: 20))),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(merchant, style: TextStyle(color: c.textPrimary, fontSize: 14)),
+                                const SizedBox(height: 4),
+                                CategoryBadge(category: category),
+                              ],
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              '${amount < 0 ? "-" : "+"}₦${fmtNumber(amount.abs().round())}',
+                              style: AppTheme.monoSized(16, color: amount < 0 ? AppColors.destructive : AppColors.success),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeInOut,
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Recent Transactions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Recent Transactions', style: Theme.of(context).textTheme.titleMedium),
-                Row(
-                  children: [
-                    Text('See all', style: TextStyle(color: AppColors.accent, fontSize: 14)),
-                    const Icon(Icons.chevron_right, color: AppColors.accent, size: 18),
-                  ],
-                ),
+                  );
+                }),
               ],
-            ),
-            const SizedBox(height: 12),
-            ...(_transactions.map((tx) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppColors.surfaceLight),
-                      child: Center(child: Text(tx.icon, style: const TextStyle(fontSize: 20))),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
+
+              // Budget Progress
+              if (budgets.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text('Budget Progress', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                ...budgets.map((b) {
+                  final category = b['category'] ?? '';
+                  final spent = (b['spent'] as num).toDouble();
+                  final total = (b['total'] as num).toDouble();
+                  final pct = total > 0 ? spent / total : 0.0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: GlassCard(
+                      padding: const EdgeInsets.all(16),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(tx.merchant, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            CategoryBadge(category: tx.category),
-                            const SizedBox(width: 8),
-                            Flexible(child: Text(tx.time, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis)),
-                          ]),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: Text(category, style: TextStyle(color: c.textPrimary, fontSize: 14), overflow: TextOverflow.ellipsis)),
+                              Text('₦${fmtNumber(spent.round())} / ₦${fmtNumber(total.round())}',
+                                  style: AppTheme.monoSized(12, color: c.textSecondary)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: pct.clamp(0.0, 1.0),
+                              backgroundColor: c.background.withValues(alpha: 0.5),
+                              valueColor: AlwaysStoppedAnimation(pct > 0.9 ? AppColors.destructive : AppColors.accent),
+                              minHeight: 8,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    Flexible(
-                      child: Text(
-                        '${tx.amount < 0 ? "-" : "+"}₦${fmtNumber(tx.amount.abs())}',
-                        style: AppTheme.monoSized(16, color: tx.amount < 0 ? AppColors.destructive : AppColors.success),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ))),
+                  );
+                }),
+              ],
 
-            const SizedBox(height: 24),
-
-            // Budget Progress
-            Text('Budget Progress', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            ..._budgets.map((b) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(child: Text(b.category, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14), overflow: TextOverflow.ellipsis)),
-                        Text('₦${fmtNumber(b.spent)} / ₦${fmtNumber(b.total)}',
-                            style: AppTheme.monoSized(12, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: b.spent / b.total,
-                        backgroundColor: AppColors.background.withValues(alpha: 0.5),
-                        valueColor: AlwaysStoppedAnimation(b.color),
-                        minHeight: 8,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )),
-
-            const SizedBox(height: 16),
-
-            // AI Insight
-            GlassCard(
-              padding: const EdgeInsets.all(20),
-              animate: true,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [AppColors.accent.withValues(alpha: 0.1), AppColors.primaryGreen.withValues(alpha: 0.2)],
-              ),
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
-              child: Stack(
-                children: [
-                  Positioned(top: -40, right: -40, child: Container(
-                    width: 128, height: 128,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.1)),
-                  )),
-                  Row(
+              // AI Insight
+              if (aiInsight.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                GlassCard(
+                  padding: const EdgeInsets.all(20),
+                  animate: true,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [AppColors.accent.withValues(alpha: 0.1), AppColors.primaryGreen.withValues(alpha: 0.2)],
+                  ),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
@@ -275,30 +295,14 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('You spend 40% more on weekends — want to set a weekend limit?',
-                                style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.accent, foregroundColor: AppColors.background,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                              ),
-                              child: const Text('Set Limit', style: TextStyle(fontSize: 14)),
-                            ),
-                          ],
-                        ),
+                        child: Text(aiInsight, style: TextStyle(color: c.textPrimary, fontSize: 14)),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -316,15 +320,16 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color, String change) {
+  Widget _statCard(BuildContext context, String label, String value, IconData icon, Color color, String change) {
+    final c = AppColors.of(context);
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(label, style: TextStyle(color: c.textSecondary, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(value, style: AppTheme.monoSized(20)),
+          Text(value, style: AppTheme.monoSized(20, color: c.textPrimary)),
           const SizedBox(height: 4),
           Row(children: [
             Icon(icon, size: 12, color: color),
@@ -336,18 +341,15 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  static String _fmt(int v) => fmtNumber(v);
-}
-
-class _Tx {
-  final String merchant, category, time, icon;
-  final int amount;
-  const _Tx(this.merchant, this.category, this.amount, this.time, this.icon);
-}
-
-class _Budget {
-  final String category;
-  final int spent, total;
-  final Color color;
-  const _Budget(this.category, this.spent, this.total, this.color);
+  String _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'food': case 'food & dining': return '🍔';
+      case 'transport': case 'transportation': return '🚗';
+      case 'shopping': return '🛒';
+      case 'bills': case 'utilities': return '⚡';
+      case 'airtime': return '📱';
+      case 'entertainment': return '🎬';
+      default: return '📦';
+    }
+  }
 }
