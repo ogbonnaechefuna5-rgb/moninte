@@ -14,8 +14,9 @@ class AppColors {
   static const Color surfaceLightLight = Color(0xFFC4D4BF);
   static const Color primaryGreenLight = Color(0xFF1A5C3A);
 
-  // ── Accent (same in both modes) ──
-  static const Color accent = Color(0xFFA8FF3E);
+  // ── Accent ──
+  static const Color accent = Color(0xFFA8FF3E);          // neon — dark mode only
+  static const Color accentOnLight = Color(0xFF2E7D32);   // accessible dark green for light mode
 
   // ── Text (dark mode) ──
   static const Color textPrimary = Color(0xFFF5F5F0);
@@ -82,11 +83,10 @@ class _ThemeColors {
         textPrimary = AppColors.textPrimaryLight,
         textSecondary = AppColors.textSecondaryLight,
         borderDefault = const Color(0x1A000000), // black 10%
-        borderAccent = const Color(0x4DA8FF3E),  // accent 30%
+        borderAccent = const Color(0x4D2E7D32),  // accentOnLight 30%
         isDark = false;
 
-  // Accent is the same in both modes
-  Color get accent => AppColors.accent;
+  Color get accent => isDark ? AppColors.accent : AppColors.accentOnLight;
 }
 
 class AppTheme {
@@ -113,7 +113,7 @@ class AppTheme {
         brightness: Brightness.light,
         scaffoldBackgroundColor: AppColors.backgroundLight,
         colorScheme: const ColorScheme.light(
-          primary: AppColors.accent,
+          primary: AppColors.accentOnLight,
           secondary: AppColors.primaryGreen,
           surface: AppColors.surfaceDarkLight,
           error: AppColors.destructive,

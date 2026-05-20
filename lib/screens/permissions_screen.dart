@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
 import '../widgets/screen_header.dart';
 import '../models/permission.dart';
+import '../services/biometric_service.dart';
 
 class PermissionsScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -34,9 +36,49 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   String? _expanded = 'sms';
 
-  void _toggle(String id) {
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool('biometric_enabled') ?? false;
+    if (!mounted) return;
+    setState(() {
+      final i = _perms.indexWhere((p) => p.id == 'biometric');
+      if (i != -1) {
+        _perms[i] = _perms[i].copyWith(
+          enabled: enabled,
+          status: enabled ? 'granted' : 'denied',
+        );
+      }
+    });
+  }
+
+  void _toggle(String id) async {
     final p = _perms.firstWhere((p) => p.id == id);
     if (p.required && p.enabled) return;
+
+    if (id == 'biometric') {
+      final available = await BiometricService.isAvailable();
+      if (!available) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Biometrics not available on this device')),
+        );
+        return;
+      }
+      final enable = !p.enabled;
+      final ok = await BiometricService.authenticate(
+        reason: enable ? 'Confirm identity to enable biometric login' : 'Confirm identity to disable biometric login',
+      );
+      if (!mounted || !ok) return;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('biometric_enabled', enable);
+    }
+
     setState(() {
       final i = _perms.indexOf(p);
       _perms[i] = p.copyWith(enabled: !p.enabled, status: !p.enabled ? 'granted' : 'denied');
@@ -61,14 +103,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               onBack: widget.onBack,
             ),
 
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Permission health
             GlassCard(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.shield, size: 20, color: AppColors.accent),
+                  Icon(Icons.shield, size: 20, color: c.accent),
                   const SizedBox(width: 8),
                   Text('Permission health', style: TextStyle(color: c.textPrimary)),
                 ]),
@@ -78,7 +120,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   child: LinearProgressIndicator(
                     value: granted / _perms.length,
                     backgroundColor: c.surfaceLight,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                    valueColor: AlwaysStoppedAnimation(c.accent),
                     minHeight: 8,
                   ),
                 ),
@@ -97,7 +139,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             // Required notice
             GlassCard(
               padding: const EdgeInsets.all(16),
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+              border: Border.all(color: c.accent.withValues(alpha: 0.2)),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warning),
                 const SizedBox(width: 12),
@@ -105,7 +147,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   style: TextStyle(color: c.textSecondary, fontSize: 12, height: 1.5),
                   children: [
                     const TextSpan(text: 'Permissions marked '),
-                    TextSpan(text: 'Core feature', style: TextStyle(color: AppColors.accent)),
+                    TextSpan(text: 'Core feature', style: TextStyle(color: c.accent)),
                     const TextSpan(text: ' are required for Moninte to work. Revoking them will disable key functionality.'),
                   ],
                 ))),
@@ -129,7 +171,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                           decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: p.iconColor.withValues(alpha: 0.1)),
                           child: Icon(p.icon, size: 20, color: p.iconColor),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Row(children: [
                             Text(p.title, style: TextStyle(color: c.textPrimary)),
@@ -137,8 +179,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: AppColors.accent.withValues(alpha: 0.1)),
-                                child: const Text('Core', style: TextStyle(color: AppColors.accent, fontSize: 10)),
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: c.accent.withValues(alpha: 0.1)),
+                                child: Text('Core', style: TextStyle(color: c.accent, fontSize: 10)),
                               ),
                             ],
                           ]),
@@ -176,7 +218,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                               onTap: () => _toggle(p.id),
                               child: Text(
                                 p.status == 'denied' ? 'Grant this permission →' : 'Request permission →',
-                                style: const TextStyle(color: AppColors.accent, fontSize: 14),
+                                style: TextStyle(color: c.accent, fontSize: 14),
                               ),
                             ),
                           ],

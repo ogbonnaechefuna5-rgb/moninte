@@ -74,16 +74,16 @@ class _NavButton extends StatelessWidget {
               width: isActive ? 32 : 0,
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
-                color: isActive ? AppColors.accent : Colors.transparent,
+                color: isActive ? c.accent : Colors.transparent,
                 borderRadius: BorderRadius.circular(1),
               ),
             ),
             Icon(
               item.icon,
               size: 22,
-              color: isActive ? AppColors.accent : c.textSecondary,
+              color: isActive ? c.accent : c.textSecondary,
               shadows: isActive
-                  ? [Shadow(color: AppColors.accent.withValues(alpha: 0.5), blurRadius: 8)]
+                  ? [Shadow(color: c.accent.withValues(alpha: 0.5), blurRadius: 8)]
                   : null,
             ),
             const SizedBox(height: 2),
@@ -91,7 +91,7 @@ class _NavButton extends StatelessWidget {
               item.label,
               style: TextStyle(
                 fontSize: 10,
-                color: isActive ? AppColors.accent : c.textSecondary,
+                color: isActive ? c.accent : c.textSecondary,
               ),
             ),
           ],

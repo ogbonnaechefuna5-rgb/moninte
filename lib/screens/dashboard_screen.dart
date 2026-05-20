@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
@@ -6,6 +7,7 @@ import '../widgets/category_badge.dart';
 import '../widgets/notification_pane.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
+import '../providers/preferences_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -36,11 +38,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final hideBalances = context.watch<PreferencesProvider>().hideBalances;
 
     if (_loading) {
       return Scaffold(
         backgroundColor: c.background,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
@@ -65,14 +68,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
-          color: AppColors.accent,
+          color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Image.asset('assets/images/moninte-logo.png', height: 36),
-                  const Spacer(),
                   GestureDetector(
                     onTap: () => showModalBottomSheet(
                       context: context,
@@ -111,14 +113,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Positioned(top: -20, right: -20, child: Container(
                       width: 128, height: 128,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.05)),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent.withValues(alpha: 0.05)),
                     )),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Net Worth', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+                        Row(
+                          children: [
+                            Text('Net Worth', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => context.read<PreferencesProvider>().toggle('hideBalances'),
+                              child: Icon(
+                                hideBalances ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 18,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 4),
-                        Text('₦${fmtNumber(netWorth.round())}', style: AppTheme.monoSized(34, weight: FontWeight.w700, color: c.textPrimary)),
+                        Text(hideBalances ? '₦ ****' : '₦${fmtNumber(netWorth.round())}', style: AppTheme.monoSized(34, weight: FontWeight.w700, color: c.textPrimary)),
                         const SizedBox(height: 12),
                         if (banks.isNotEmpty)
                           Wrap(spacing: 8, children: banks.map((b) => _bankBadge(b)).toList()),
@@ -162,7 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               LineChartBarData(
                                 spots: List.generate(trendData.length, (i) => FlSpot(i.toDouble(), trendData[i])),
                                 isCurved: true,
-                                color: AppColors.accent,
+                                color: c.accent,
                                 barWidth: 2,
                                 dotData: const FlDotData(show: false),
                                 belowBarData: BarAreaData(show: false),
@@ -187,8 +202,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text('Recent Transactions', style: Theme.of(context).textTheme.titleMedium),
                     Row(children: [
-                      Text('See all', style: TextStyle(color: AppColors.accent, fontSize: 14)),
-                      const Icon(Icons.chevron_right, color: AppColors.accent, size: 18),
+                      Text('See all', style: TextStyle(color: c.accent, fontSize: 14)),
+                      Icon(Icons.chevron_right, color: c.accent, size: 18),
                     ]),
                   ],
                 ),
@@ -263,7 +278,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: LinearProgressIndicator(
                               value: pct.clamp(0.0, 1.0),
                               backgroundColor: c.background.withValues(alpha: 0.5),
-                              valueColor: AlwaysStoppedAnimation(pct > 0.9 ? AppColors.destructive : AppColors.accent),
+                              valueColor: AlwaysStoppedAnimation(pct > 0.9 ? AppColors.destructive : c.accent),
                               minHeight: 8,
                             ),
                           ),
@@ -282,16 +297,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   animate: true,
                   gradient: LinearGradient(
                     begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    colors: [AppColors.accent.withValues(alpha: 0.1), AppColors.primaryGreen.withValues(alpha: 0.2)],
+                    colors: [c.accent.withValues(alpha: 0.1), AppColors.primaryGreen.withValues(alpha: 0.2)],
                   ),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+                  border: Border.all(color: c.accent.withValues(alpha: 0.2)),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
                         width: 40, height: 40,
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppColors.accent.withValues(alpha: 0.2)),
-                        child: const Icon(Icons.auto_awesome, size: 20, color: AppColors.accent),
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: c.accent.withValues(alpha: 0.2)),
+                        child: Icon(Icons.auto_awesome, size: 20, color: c.accent),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -309,14 +324,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _bankBadge(String name) {
+    final c = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(100),
         color: AppColors.primaryGreen.withValues(alpha: 0.3),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+        border: Border.all(color: c.accent.withValues(alpha: 0.2)),
       ),
-      child: Text(name, style: const TextStyle(color: AppColors.accent, fontSize: 12)),
+      child: Text(name, style: TextStyle(color: c.accent, fontSize: 12)),
     );
   }
 

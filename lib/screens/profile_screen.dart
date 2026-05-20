@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
@@ -10,6 +11,7 @@ import '../widgets/section_label.dart';
 import '../services/biometric_service.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/passcode_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueChanged<String> onNavigate;
@@ -22,7 +24,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _smsEnabled = true;
   bool _analyticsEnabled = true;
-  bool _biometricEnabled = true;
+  bool _biometricEnabled = false;
+  bool _passcodeEnabled = false;
   bool _loading = true;
 
   String _name = '';
@@ -33,6 +36,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+    _loadSecurityPrefs();
+  }
+
+  Future<void> _loadSecurityPrefs() async {
+    final p = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _biometricEnabled = p.getBool('biometric_enabled') ?? false;
+      _passcodeEnabled  = p.getString('app_passcode') != null;
+    });
   }
 
   Future<void> _loadProfile() async {
@@ -75,26 +88,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _toggleBiometric(bool enable) async {
+    final available = await BiometricService.isAvailable();
+    if (!available) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometrics not available on this device')),
+      );
+      return;
+    }
+    final ok = await BiometricService.authenticate(
+      reason: enable ? 'Confirm identity to enable biometric login' : 'Confirm identity to disable biometric login',
+    );
+    if (!mounted) return;
+    if (ok) {
+      final p = await SharedPreferences.getInstance();
+      await p.setBool('biometric_enabled', enable);
+      setState(() => _biometricEnabled = enable);
+    }
+  }
+
+  Future<void> _togglePasscode(bool enable) async {
     if (enable) {
-      final available = await BiometricService.isAvailable();
-      if (!available) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometrics not available on this device')),
-        );
-        return;
-      }
-      final authenticated = await BiometricService.authenticate(
-        reason: 'Confirm your identity to enable biometric login',
+      final ok = await showPasscodeScreen(
+        context,
+        mode: PasscodeMode.setup,
       );
-      if (!mounted) return;
-      if (authenticated) setState(() => _biometricEnabled = true);
+      if (!mounted || ok != true) return;
+      setState(() => _passcodeEnabled = true);
     } else {
-      final authenticated = await BiometricService.authenticate(
-        reason: 'Confirm your identity to disable biometric login',
+      final ok = await showPasscodeScreen(
+        context,
+        mode: PasscodeMode.verify,
+        title: 'Enter Current Passcode',
+        subtitle: 'Confirm to disable passcode',
       );
-      if (!mounted) return;
-      if (authenticated) setState(() => _biometricEnabled = false);
+      if (!mounted || ok != true) return;
+      final p = await SharedPreferences.getInstance();
+      await p.remove('app_passcode');
+      setState(() => _passcodeEnabled = false);
     }
   }
 
@@ -181,6 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {}
 
     if (!mounted) return;
+    final c = AppColors.of(context);
     showAppSheet(
       context,
       title: 'Active Sessions',
@@ -195,8 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(children: [
                 Container(
                   width: 36, height: 36,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: AppColors.accent.withValues(alpha: 0.1)),
-                  child: const Icon(Icons.smartphone, size: 18, color: AppColors.accent),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: c.accent.withValues(alpha: 0.1)),
+                  child: Icon(Icons.smartphone, size: 18, color: c.accent),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -273,7 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: c.background,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
@@ -296,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Icon(Icons.arrow_back, size: 20, color: c.textPrimary),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Text('Profile', style: Theme.of(context).textTheme.headlineLarge),
             ]),
 
@@ -307,9 +339,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(children: [
                 Container(
                   width: 80, height: 80,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [AppColors.accent, AppColors.primaryGreen]),
+                    gradient: LinearGradient(colors: [c.accent, AppColors.primaryGreen]),
                   ),
                   child: Center(
                     child: Text(_initials,
@@ -349,12 +381,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(children: [
                 _toggleItem(Icons.notifications_outlined, 'SMS Detection', _smsEnabled, (v) {
                   setState(() => _smsEnabled = v);
-                  ApiService.savePreferences(_smsEnabled, _analyticsEnabled, false);
+                  ApiService.savePreferences({'sms_detection': _smsEnabled, 'analytics': _analyticsEnabled, 'partner_offers': false});
                 }),
                 _divider(),
                 _toggleItem(Icons.bar_chart_rounded, 'Analytics Tracking', _analyticsEnabled, (v) {
                   setState(() => _analyticsEnabled = v);
-                  ApiService.savePreferences(_smsEnabled, _analyticsEnabled, false);
+                  ApiService.savePreferences({'sms_detection': _smsEnabled, 'analytics': _analyticsEnabled, 'partner_offers': false});
                 }),
                 _divider(),
                 _menuItem(Icons.tune, 'All Preferences', onTap: () => widget.onNavigate('preferences')),
@@ -366,7 +398,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SectionLabel('Security'),
             GlassCard(
               child: Column(children: [
-                _toggleItem(Icons.shield_outlined, 'Biometric Login', _biometricEnabled, (v) => _toggleBiometric(v)),
+                _toggleItem(Icons.fingerprint, 'Biometric Login', _biometricEnabled, (v) => _toggleBiometric(v)),
+                _divider(),
+                _toggleItem(Icons.pin_outlined, 'Passcode', _passcodeEnabled, (v) => _togglePasscode(v)),
                 _divider(),
                 _menuItem(Icons.shield, 'Active Sessions', onTap: _showActiveSessions),
                 _divider(),
@@ -403,7 +437,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(children: [
           Icon(icon, size: 20, color: c.textSecondary),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: Text(label, style: TextStyle(color: c.textPrimary))),
           if (badge != null)
             Container(
@@ -411,9 +445,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               margin: const EdgeInsets.only(right: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(100),
-                color: AppColors.accent.withValues(alpha: 0.08),
+                color: c.accent.withValues(alpha: 0.08),
               ),
-              child: Text(badge, style: const TextStyle(color: AppColors.accent, fontSize: 12)),
+              child: Text(badge, style: TextStyle(color: c.accent, fontSize: 12)),
             ),
           Icon(Icons.chevron_right, size: 20, color: c.textSecondary),
         ]),
@@ -449,7 +483,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-
 /// A confirmation bottom sheet used for destructive actions.
 class ConfirmSheet extends StatelessWidget {
   final IconData icon;

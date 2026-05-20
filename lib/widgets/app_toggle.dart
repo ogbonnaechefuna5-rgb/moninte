@@ -27,7 +27,7 @@ class AppToggle extends StatelessWidget {
           height: 26,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(13),
-            color: enabled ? AppColors.accent : c.surfaceLight,
+            color: enabled ? c.accent : c.surfaceLight,
             border: enabled ? null : Border.all(color: c.borderDefault),
           ),
           child: AnimatedAlign(

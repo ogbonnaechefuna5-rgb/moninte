@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const _base = 'http://localhost:8080/api/v1';
+  static const _base = String.fromEnvironment(
+    'API_BASE',
+    defaultValue: 'http://localhost:8080/api/v1',
+  );
   static String _token = '';
 
   static void setToken(String token) => _token = token;
@@ -157,13 +160,8 @@ class ApiService {
   // ── Preferences ──
   static Future<Map<String, dynamic>> getPreferences() => _get('/user/preferences');
 
-  static Future<void> savePreferences(bool sms, bool analytics, bool offers) async {
-    await _put('/user/preferences', {
-      'sms_detection': sms,
-      'analytics': analytics,
-      'partner_offers': offers,
-    });
-  }
+  static Future<void> savePreferences(Map<String, dynamic> prefs) =>
+      _put('/user/preferences', prefs);
 
   // ── Linked Accounts ──
   static Future<Map<String, dynamic>> getLinkedAccounts({int page = 1, int limit = 20}) =>

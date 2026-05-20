@@ -101,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Icon(Icons.arrow_back_rounded, color: c.textPrimary, size: 22),
                     )
                   else
-                    const SizedBox(width: 22),
+                    SizedBox(width: 22),
                   const Spacer(),
                   if (_currentStep < _totalSteps - 1)
                     GestureDetector(
@@ -115,7 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: LinearProgressIndicator(
                     value: (_currentStep + 1) / _totalSteps,
                     backgroundColor: c.surfaceLight.withValues(alpha: 0.5),
-                    valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                    valueColor: AlwaysStoppedAnimation(c.accent),
                     minHeight: 3,
                   ),
                 ),
@@ -180,7 +180,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: ElevatedButton(
                     onPressed: _next,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
+                      backgroundColor: c.accent,
                       foregroundColor: c.background,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
@@ -211,7 +211,7 @@ class _NameStep extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Text('What should we\ncall you?', style: Theme.of(context).textTheme.displayMedium),
         const SizedBox(height: 8),
         Text("This is how you'll appear in the app", style: TextStyle(color: c.textSecondary)),
@@ -219,11 +219,11 @@ class _NameStep extends StatelessWidget {
         Center(
           child: Container(
             width: 88, height: 88,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [AppColors.accent, AppColors.primaryGreen],
+                colors: [c.accent, AppColors.primaryGreen],
               ),
             ),
             child: Center(
@@ -270,10 +270,11 @@ class _PhotoStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Text('Add a profile\nphoto', style: Theme.of(context).textTheme.displayMedium),
         const SizedBox(height: 8),
         const Text('Or keep your initials — totally up to you', style: TextStyle(color: AppColors.textSecondary)),
@@ -287,9 +288,9 @@ class _PhotoStep extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: photoFile == null
-                      ? const LinearGradient(
+                      ? LinearGradient(
                           begin: Alignment.topLeft, end: Alignment.bottomRight,
-                          colors: [AppColors.accent, AppColors.primaryGreen])
+                          colors: [c.accent, AppColors.primaryGreen])
                       : null,
                 ),
                 child: photoFile != null
@@ -306,7 +307,7 @@ class _PhotoStep extends StatelessWidget {
                 child: Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.accent,
+                    shape: BoxShape.circle, color: c.accent,
                     border: Border.all(color: AppColors.background, width: 3),
                   ),
                   child: const Icon(Icons.camera_alt_rounded, color: AppColors.background, size: 20),
@@ -344,12 +345,13 @@ class _PhotoOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(children: [
-          Icon(icon, color: AppColors.accent, size: 28),
+          Icon(icon, color: c.accent, size: 28),
           const SizedBox(height: 8),
           Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
         ]),
@@ -368,6 +370,7 @@ class _BankStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -390,12 +393,12 @@ class _BankStep extends StatelessWidget {
                     color: AppColors.surfaceDark.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: selected ? AppColors.accent.withValues(alpha: 0.6) : AppColors.borderDefault,
+                      color: selected ? c.accent.withValues(alpha: 0.6) : c.borderDefault,
                       width: selected ? 1.5 : 1,
                     ),
                   ),
                   child: Row(children: [
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: b.color),
@@ -411,9 +414,9 @@ class _BankStep extends StatelessWidget {
                           overflow: TextOverflow.ellipsis),
                     ),
                     if (selected)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 10),
-                        child: Icon(Icons.check_circle, color: AppColors.accent, size: 18),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: Icon(Icons.check_circle, color: c.accent, size: 18),
                       ),
                   ]),
                 ),
@@ -441,10 +444,11 @@ class _BudgetStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Text('Set your\nmonthly budget', style: Theme.of(context).textTheme.displayMedium),
         const SizedBox(height: 8),
         const Text('You can fine-tune categories later', style: TextStyle(color: AppColors.textSecondary)),
@@ -452,16 +456,16 @@ class _BudgetStep extends StatelessWidget {
         Center(
           child: Text(
             fmtCurrencyShort(monthlyBudget),
-            style: AppTheme.monoSized(48, color: AppColors.accent, weight: FontWeight.w700),
+            style: AppTheme.monoSized(48, color: c.accent, weight: FontWeight.w700),
           ),
         ),
         const SizedBox(height: 32),
         SliderTheme(
           data: SliderThemeData(
-            activeTrackColor: AppColors.accent,
+            activeTrackColor: c.accent,
             inactiveTrackColor: AppColors.surfaceLight,
-            thumbColor: AppColors.accent,
-            overlayColor: AppColors.accent.withValues(alpha: 0.15),
+            thumbColor: c.accent,
+            overlayColor: c.accent.withValues(alpha: 0.15),
             trackHeight: 6,
           ),
           child: Slider(
@@ -481,9 +485,9 @@ class _BudgetStep extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.accent : AppColors.surfaceDark.withValues(alpha: 0.5),
+                  color: selected ? c.accent : AppColors.surfaceDark.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(100),
-                  border: Border.all(color: selected ? AppColors.accent : AppColors.borderDefault),
+                  border: Border.all(color: selected ? c.accent : AppColors.borderDefault),
                 ),
                 child: Text(
                   fmtCurrencyShort(v),
@@ -516,10 +520,11 @@ class _NotifStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Text('Notification\npreferences', style: Theme.of(context).textTheme.displayMedium),
         const SizedBox(height: 8),
         const Text('Choose what you want to be notified about', style: TextStyle(color: AppColors.textSecondary)),
@@ -529,14 +534,14 @@ class _NotifStep extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
+              color: c.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+              border: Border.all(color: c.accent.withValues(alpha: 0.3)),
             ),
-            child: const Row(children: [
-              Icon(Icons.notifications_active_rounded, color: AppColors.accent, size: 20),
-              SizedBox(width: 10),
-              Text('Enable All', style: TextStyle(color: AppColors.accent, fontSize: 14, fontWeight: FontWeight.w500)),
+            child: Row(children: [
+              Icon(Icons.notifications_active_rounded, color: c.accent, size: 20),
+              const SizedBox(width: 10),
+              Text('Enable All', style: TextStyle(color: c.accent, fontSize: 14, fontWeight: FontWeight.w500)),
             ]),
           ),
         ),
@@ -575,6 +580,7 @@ class _SuccessStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -583,10 +589,10 @@ class _SuccessStep extends StatelessWidget {
           width: 100, height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.accent.withValues(alpha: 0.15),
-            boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.2), blurRadius: 40, spreadRadius: 10)],
+            color: c.accent.withValues(alpha: 0.15),
+            boxShadow: [BoxShadow(color: c.accent.withValues(alpha: 0.2), blurRadius: 40, spreadRadius: 10)],
           ),
-          child: const Icon(Icons.check_rounded, color: AppColors.accent, size: 48),
+          child: Icon(Icons.check_rounded, color: c.accent, size: 48),
         ),
         const SizedBox(height: 32),
         Text('All Set! 🎉', style: Theme.of(context).textTheme.displayMedium),
@@ -615,7 +621,7 @@ class _SuccessStep extends StatelessWidget {
           child: ElevatedButton(
             onPressed: onComplete,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
+              backgroundColor: c.accent,
               foregroundColor: AppColors.background,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),

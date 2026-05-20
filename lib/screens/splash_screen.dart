@@ -82,17 +82,17 @@ class _SplashScreenState extends State<SplashScreen> {
                         const Spacer(),
                         GlassCard(
                           padding: const EdgeInsets.all(32),
-                          child: Icon(s.icon, size: 80, color: AppColors.accent),
+                          child: Icon(s.icon, size: 80, color: c.accent),
                         ),
-                        const SizedBox(height: 40),
+                        SizedBox(height: 40),
                         Text(s.title,
                             style: Theme.of(context).textTheme.displayMedium,
                             textAlign: TextAlign.center),
                         const SizedBox(height: 12),
                         Text(s.subtitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 18,
-                                color: AppColors.accent,
+                                color: c.accent,
                                 fontWeight: FontWeight.w500),
                             textAlign: TextAlign.center),
                         const SizedBox(height: 16),
@@ -125,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   width: active ? 32 : 8,
                   decoration: BoxDecoration(
                     color: active
-                        ? AppColors.accent
+                        ? c.accent
                         : c.textSecondary.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
@@ -133,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen> {
               }),
             ),
 
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
 
             // CTA button
             Padding(
@@ -143,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: ElevatedButton(
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: c.accent,
                     foregroundColor: c.background,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

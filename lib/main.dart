@@ -1,27 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'widgets/bottom_nav.dart';
 import 'screens/splash_screen.dart';
+import 'screens/auth_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/budget_screen.dart';
 import 'screens/savings_screen.dart';
+import 'screens/preferences_screen.dart';
 import 'screens/ai_assistant_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/linked_accounts_screen.dart';
 import 'screens/permissions_screen.dart';
-import 'screens/preferences_screen.dart';
+import 'providers/preferences_provider.dart';
 
-void main() {
-  runApp(const MoninteApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final isFirstLaunch = !(prefs.getBool('has_seen_splash') ?? false);
+  if (isFirstLaunch) await prefs.setBool('has_seen_splash', true);
+  runApp(MoninteApp(showSplash: isFirstLaunch));
 }
 
 class MoninteApp extends StatelessWidget {
-  const MoninteApp({super.key});
+  final bool showSplash;
+  const MoninteApp({super.key, required this.showSplash});
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +37,7 @@ class MoninteApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
+        ChangeNotifierProvider(create: (_) => PreferencesProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (_, themeProvider, __) => MaterialApp(
@@ -37,7 +46,7 @@ class MoninteApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.mode,
-          home: const AppShell(),
+          home: AppShell(showSplash: showSplash),
         ),
       ),
     );
@@ -45,26 +54,42 @@ class MoninteApp extends StatelessWidget {
 }
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  final bool showSplash;
+  const AppShell({super.key, required this.showSplash});
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  bool _showSplash = true;
+  late bool _showSplash = widget.showSplash;
+  bool _showAuth = false;
   bool _showOnboarding = false;
   String _activeScreen = 'home';
 
   static const _subScreens = ['linked-accounts', 'permissions', 'preferences'];
 
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.showSplash) {
+      final auth = context.read<AuthProvider>();
+      if (!auth.isLoggedIn) _showAuth = true;
+    }
+  }
+
   void _completeSplash() {
     setState(() {
       _showSplash = false;
       final auth = context.read<AuthProvider>();
-      if (!auth.isLoggedIn) {
-        _showOnboarding = true;
-      }
+      if (!auth.isLoggedIn) _showAuth = true;
+    });
+  }
+
+  void _completeAuth() {
+    setState(() {
+      _showAuth = false;
+      _showOnboarding = true;
     });
   }
 
@@ -88,6 +113,10 @@ class _AppShellState extends State<AppShell> {
       return SplashScreen(onComplete: _completeSplash);
     }
 
+    if (_showAuth) {
+      return AuthScreen(onComplete: _completeAuth);
+    }
+
     if (_showOnboarding) {
       return OnboardingScreen(onComplete: _completeOnboarding);
     }
@@ -95,24 +124,24 @@ class _AppShellState extends State<AppShell> {
     final isSubScreen = _subScreens.contains(_activeScreen);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       body: Stack(
         children: [
           _buildScreen(),
           if (_activeScreen != 'profile' && !isSubScreen)
             Positioned(
               top: MediaQuery.of(context).padding.top + 12,
-              right: 16,
+              left: 16,
               child: GestureDetector(
                 onTap: () => _navigate('profile'),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.surfaceDark.withValues(alpha: 0.5),
-                    border: Border.all(color: AppColors.borderDefault),
+                    color: AppColors.of(context).surfaceDark.withValues(alpha: 0.5),
+                    border: Border.all(color: AppColors.of(context).borderDefault),
                   ),
-                  child: const Icon(Icons.person_outline, size: 20, color: AppColors.textSecondary),
+                  child: Icon(Icons.person_outline, size: 20, color: AppColors.of(context).textSecondary),
                 ),
               ),
             ),

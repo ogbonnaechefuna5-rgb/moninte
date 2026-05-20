@@ -57,12 +57,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
-          color: AppColors.accent,
+          color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
               const ScreenHeader(title: 'Analytics', subtitle: 'Spending insights'),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               // Period pills
               Row(children: [
@@ -76,7 +76,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               const SizedBox(height: 20),
 
               if (_loading)
-                const Padding(padding: EdgeInsets.only(top: 80), child: Center(child: CircularProgressIndicator(color: AppColors.accent)))
+                Padding(padding: EdgeInsets.only(top: 80), child: Center(child: CircularProgressIndicator(color: c.accent)))
               else ...[
                 // Total Spend
                 GlassCard(
@@ -188,7 +188,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             barGroups: List.generate(weekly.length, (i) => BarChartGroupData(x: i, barRods: [
                               BarChartRodData(
                                 toY: (weekly[i]['amount'] as num).toDouble(),
-                                color: AppColors.accent, width: 20,
+                                color: c.accent, width: 20,
                                 borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
                               ),
                             ])),
@@ -217,7 +217,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           Container(
                             width: 40, height: 40,
                             decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: c.surfaceLight),
-                            child: Center(child: Text('${i + 1}', style: TextStyle(color: AppColors.accent, fontSize: 16, fontWeight: FontWeight.w600))),
+                            child: Center(child: Text('${i + 1}', style: TextStyle(color: c.accent, fontSize: 16, fontWeight: FontWeight.w600))),
                           ),
                           const SizedBox(width: 12),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -247,7 +247,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(100),
-          color: active ? AppColors.accent : c.surfaceDark.withValues(alpha: 0.5),
+          color: active ? c.accent : c.surfaceDark.withValues(alpha: 0.5),
           border: active ? null : Border.all(color: c.borderDefault),
         ),
         child: Text(label, style: TextStyle(color: active ? c.background : c.textSecondary, fontSize: 14)),

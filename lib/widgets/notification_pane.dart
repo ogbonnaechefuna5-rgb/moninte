@@ -18,13 +18,20 @@ class NotificationPane extends StatefulWidget {
 }
 
 class _NotificationPaneState extends State<NotificationPane> {
-  final List<_Notif> _notifs = [
-    _Notif(Icons.trending_up, AppColors.destructive, 'Budget Alert', 'You\'ve used 95% of your Bills budget.', '2m ago'),
-    _Notif(Icons.auto_awesome, AppColors.accent, 'AI Insight', 'You spend 40% more on weekends. Want to set a limit?', '1h ago'),
-    _Notif(Icons.sync, AppColors.success, 'Sync Complete', 'All 3 accounts synced successfully.', '3h ago'),
-    _Notif(Icons.receipt_long, AppColors.chart2, 'New Transaction', 'Shoprite — ₦12,500 debited from GTBank.', 'Yesterday'),
-    _Notif(Icons.savings, AppColors.success, 'Savings Milestone', 'You\'re 45% toward your Emergency Fund goal!', '2d ago', read: true),
-  ];
+  late final List<_Notif> _notifs;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final c = AppColors.of(context);
+    _notifs = [
+      _Notif(Icons.trending_up, AppColors.destructive, 'Budget Alert', 'You\'ve used 95% of your Bills budget.', '2m ago'),
+      _Notif(Icons.auto_awesome, c.accent, 'AI Insight', 'You spend 40% more on weekends. Want to set a limit?', '1h ago'),
+      _Notif(Icons.sync, AppColors.success, 'Sync Complete', 'All 3 accounts synced successfully.', '3h ago'),
+      _Notif(Icons.receipt_long, AppColors.chart2, 'New Transaction', 'Shoprite — ₦12,500 debited from GTBank.', 'Yesterday'),
+      _Notif(Icons.savings, AppColors.success, 'Savings Milestone', 'You\'re 45% toward your Emergency Fund goal!', '2d ago', read: true),
+    ];
+  }
 
   int get _unread => _notifs.where((n) => !n.read).length;
 
@@ -64,7 +71,7 @@ class _NotificationPaneState extends State<NotificationPane> {
               if (_unread > 0)
                 GestureDetector(
                   onTap: () => setState(() { for (final n in _notifs) { n.read = true; } }),
-                  child: const Text('Mark all read', style: TextStyle(color: AppColors.accent, fontSize: 13)),
+                  child: Text('Mark all read', style: TextStyle(color: c.accent, fontSize: 13)),
                 ),
             ],
           ),
@@ -82,7 +89,7 @@ class _NotificationPaneState extends State<NotificationPane> {
                   child: GlassCard(
                     padding: const EdgeInsets.all(14),
                     gradient: n.read ? null : LinearGradient(colors: [
-                      AppColors.accent.withValues(alpha: 0.05),
+                      c.accent.withValues(alpha: 0.05),
                       AppColors.surfaceDark.withValues(alpha: 0.6),
                     ]),
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -91,7 +98,7 @@ class _NotificationPaneState extends State<NotificationPane> {
                         decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: n.iconColor.withValues(alpha: 0.15)),
                         child: Icon(n.icon, size: 20, color: n.iconColor),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                           Text(n.title, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: n.read ? FontWeight.w400 : FontWeight.w600)),
@@ -102,7 +109,7 @@ class _NotificationPaneState extends State<NotificationPane> {
                       ])),
                       if (!n.read) ...[
                         const SizedBox(width: 8),
-                        Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 4), decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent)),
+                        Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 4), decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent)),
                       ],
                     ]),
                   ),

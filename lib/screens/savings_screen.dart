@@ -38,7 +38,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: c.background,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
@@ -53,12 +53,12 @@ class _SavingsScreenState extends State<SavingsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
-          color: AppColors.accent,
+          color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
               const ScreenHeader(title: 'Savings Goals', subtitle: 'Track your financial targets'),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               // Summary card
               GlassCard(
@@ -78,9 +78,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   ])),
                   Container(
                     width: 64, height: 64,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [AppColors.accent, AppColors.primaryGreen]),
+                      gradient: LinearGradient(colors: [c.accent, AppColors.primaryGreen]),
                     ),
                     child: Icon(Icons.track_changes, size: 32, color: c.background),
                   ),
@@ -106,10 +106,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                           Expanded(child: Text(name, style: TextStyle(color: c.textPrimary), overflow: TextOverflow.ellipsis)),
-                          Text('${(pct * 100).round()}%', style: const TextStyle(color: AppColors.accent, fontSize: 14)),
+                          Text('${(pct * 100).round()}%', style: TextStyle(color: c.accent, fontSize: 14)),
                         ]),
                         if (deadline.isNotEmpty) ...[
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Row(children: [
                             Icon(Icons.calendar_today, size: 12, color: c.textSecondary),
                             const SizedBox(width: 4),
@@ -122,7 +122,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                           child: LinearProgressIndicator(
                             value: pct.clamp(0.0, 1.0), minHeight: 10,
                             backgroundColor: c.background.withValues(alpha: 0.5),
-                            valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                            valueColor: AlwaysStoppedAnimation(c.accent),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -171,15 +171,15 @@ class _SavingsScreenState extends State<SavingsScreen> {
               ],
 
               // Create new goal button
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               GlassCard(
                 padding: const EdgeInsets.symmetric(vertical: 28),
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.1), width: 1.5),
+                border: Border.all(color: c.accent.withValues(alpha: 0.1), width: 1.5),
                 child: Column(children: [
                   Container(
                     width: 48, height: 48,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.2)),
-                    child: const Icon(Icons.add, size: 24, color: AppColors.accent),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent.withValues(alpha: 0.2)),
+                    child: Icon(Icons.add, size: 24, color: c.accent),
                   ),
                   const SizedBox(height: 12),
                   Text('Create New Goal', style: TextStyle(color: c.textPrimary)),

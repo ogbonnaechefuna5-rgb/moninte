@@ -1,4 +1,5 @@
 import 'package:local_auth/local_auth.dart';
+import 'package:flutter/services.dart';
 
 class BiometricService {
   static final _auth = LocalAuthentication();
@@ -23,7 +24,13 @@ class BiometricService {
     try {
       return await _auth.authenticate(
         localizedReason: reason,
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
+    } on LocalAuthException {
+      return false;
+    } on PlatformException {
+      return false;
     } catch (_) {
       return false;
     }

@@ -5,7 +5,10 @@ import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
 import '../widgets/section_label.dart';
 import '../widgets/screen_header.dart';
+import '../widgets/passcode_screen.dart';
 import '../providers/theme_provider.dart';
+import '../providers/preferences_provider.dart';
+import '../services/biometric_service.dart';
 
 class PreferencesScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -17,19 +20,41 @@ class PreferencesScreen extends StatefulWidget {
 
 class _PreferencesScreenState extends State<PreferencesScreen> {
   String get _theme => context.read<ThemeProvider>().modeKey;
-
   void _setTheme(String key) => context.read<ThemeProvider>().setMode(key);
 
-  final Map<String, bool> _notifToggles = {
-    'transactions': true, 'budgetWarnings': true, 'aiInsights': true,
-    'weeklyReport': false, 'savingsReminders': true, 'promotions': false,
-  };
-
-  final Map<String, bool> _privacyToggles = {
-    'hideBalances': false, 'shareAnalytics': true, 'crashReports': true,
-  };
-
   bool _showClearConfirm = false;
+
+  Future<void> _toggleBiometric(PreferencesProvider prefs) async {
+    if (prefs.biometricEnabled) {
+      await prefs.setSecurity('biometricEnabled', false);
+      return;
+    }
+    final available = await BiometricService.isAvailable();
+    if (!mounted) return;
+    if (!available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometrics not available on this device')),
+      );
+      return;
+    }
+    final ok = await BiometricService.authenticate(reason: 'Set up biometric login');
+    if (!mounted) return;
+    if (ok) await prefs.setSecurity('biometricEnabled', true);
+  }
+
+  Future<void> _togglePasscode(PreferencesProvider prefs) async {
+    if (prefs.passcodeEnabled) {
+      final confirmed = await showPasscodeScreen(context,
+          mode: PasscodeMode.verify,
+          subtitle: 'Enter your current passcode to disable it');
+      if (!mounted) return;
+      if (confirmed == true) await prefs.setSecurity('passcodeEnabled', false);
+      return;
+    }
+    final set = await showPasscodeScreen(context, mode: PasscodeMode.setup);
+    if (!mounted) return;
+    if (set == true) await prefs.setSecurity('passcodeEnabled', true);
+  }
 
   static const _notifItems = [
     _Item('transactions', Icons.bolt, Color(0xFFA8FF3E), 'Transaction Alerts', 'Instant alerts for every debit and credit'),
@@ -49,6 +74,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final prefs = context.watch<PreferencesProvider>();
     return Scaffold(
       backgroundColor: c.background,
       body: SafeArea(
@@ -57,9 +83,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ListView(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
               children: [
-                // Header
                 ScreenHeader(title: 'Preferences', subtitle: 'Customise your Moninte experience', onBack: widget.onBack),
-
                 const SizedBox(height: 24),
 
                 // ── Display ──
@@ -67,23 +91,45 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 GlassCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(children: [
-                    const Align(alignment: Alignment.centerLeft, child: Text('Theme', style: TextStyle(color: AppColors.textPrimary, fontSize: 14))),
+                    Align(alignment: Alignment.centerLeft, child: Text('Theme', style: TextStyle(color: c.textPrimary, fontSize: 14))),
                     const SizedBox(height: 12),
                     Row(children: [
-                      _themeOption('dark', 'Dark', Icons.dark_mode),
+                      _themeOption(context, 'dark', 'Dark', Icons.dark_mode),
                       const SizedBox(width: 8),
-                      _themeOption('light', 'Light', Icons.light_mode),
+                      _themeOption(context, 'light', 'Light', Icons.light_mode),
                       const SizedBox(width: 8),
-                      _themeOption('system', 'System', Icons.computer),
+                      _themeOption(context, 'system', 'System', Icons.computer),
                     ]),
                     const SizedBox(height: 16),
-                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    Divider(height: 1, color: c.borderDefault),
                     const SizedBox(height: 16),
-                    _settingRow('Currency', 'Used for all displayed amounts', '₦ NGN'),
+                    _settingRow(context, 'Currency', 'Used for all displayed amounts', '₦ NGN'),
                     const SizedBox(height: 16),
-                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    Divider(height: 1, color: c.borderDefault),
                     const SizedBox(height: 16),
-                    _settingRow('Language', 'App display language', 'EN (NG)', icon: Icons.language),
+                    _settingRow(context, 'Language', 'App display language', 'EN (NG)', icon: Icons.language),
+                  ]),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Security ──
+                const SectionLabel('Security'),
+                GlassCard(
+                  child: Column(children: [
+                    _toggleRow(
+                      context,
+                      const _Item('biometricEnabled', Icons.fingerprint, Color(0xFF4DFF91), 'Biometric Login', 'Use Face ID or fingerprint to unlock'),
+                      prefs.biometricEnabled,
+                      () => _toggleBiometric(prefs),
+                    ),
+                    Divider(height: 1, color: c.borderDefault),
+                    _toggleRow(
+                      context,
+                      const _Item('passcodeEnabled', Icons.lock_outline, Color(0xFFA8FF3E), 'Passcode Lock', 'Require a 6-digit passcode to open the app'),
+                      prefs.passcodeEnabled,
+                      () => _togglePasscode(prefs),
+                    ),
                   ]),
                 ),
 
@@ -94,11 +140,10 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 GlassCard(
                   child: Column(
                     children: _notifItems.asMap().entries.map((e) {
-                      final i = e.key;
-                      final item = e.value;
+                      final i = e.key; final item = e.value;
                       return Column(children: [
-                        _toggleRow(item, _notifToggles[item.key]!, () => setState(() => _notifToggles[item.key] = !_notifToggles[item.key]!)),
-                        if (i < _notifItems.length - 1) Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                        _toggleRow(context, item, prefs.valueOf(item.key), () => prefs.toggle(item.key)),
+                        if (i < _notifItems.length - 1) Divider(height: 1, color: c.borderDefault),
                       ]);
                     }).toList(),
                   ),
@@ -111,11 +156,10 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 GlassCard(
                   child: Column(
                     children: _privacyItems.asMap().entries.map((e) {
-                      final i = e.key;
-                      final item = e.value;
+                      final i = e.key; final item = e.value;
                       return Column(children: [
-                        _toggleRow(item, _privacyToggles[item.key]!, () => setState(() => _privacyToggles[item.key] = !_privacyToggles[item.key]!)),
-                        if (i < _privacyItems.length - 1) Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                        _toggleRow(context, item, prefs.valueOf(item.key), () => prefs.toggle(item.key)),
+                        if (i < _privacyItems.length - 1) Divider(height: 1, color: c.borderDefault),
                       ]);
                     }).toList(),
                   ),
@@ -127,9 +171,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 const SectionLabel('Data'),
                 GlassCard(
                   child: Column(children: [
-                    _actionRow(Icons.download, AppColors.success, 'Export My Data', 'Download all transactions as CSV', () {}),
-                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
-                    _actionRow(Icons.delete_outline, AppColors.destructive, 'Clear Cache', "Free up space (won't delete your data)", () => setState(() => _showClearConfirm = true)),
+                    _actionRow(context, Icons.download, AppColors.success, 'Export My Data', 'Download all transactions as CSV', () {}),
+                    Divider(height: 1, color: c.borderDefault),
+                    _actionRow(context, Icons.delete_outline, AppColors.destructive, 'Clear Cache', "Free up space (won't delete your data)", () => setState(() => _showClearConfirm = true)),
                   ]),
                 ),
 
@@ -139,18 +183,18 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 GlassCard(
                   padding: const EdgeInsets.all(16),
                   child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
-                      Text('App Version', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-                      SizedBox(height: 4),
-                      Text('Moninte v1.0.0 — Build 2026.04', style: TextStyle(color: AppColors.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('App Version', style: TextStyle(color: c.textPrimary, fontSize: 14)),
+                      const SizedBox(height: 4),
+                      Text('Moninte v1.0.0 — Build 2026.04', style: TextStyle(color: c.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
                     ])),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: AppColors.success.withValues(alpha: 0.1)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: const [
-                        Icon(Icons.check_circle, size: 14, color: AppColors.success),
-                        SizedBox(width: 4),
-                        Text('Up to date', style: TextStyle(color: AppColors.success, fontSize: 12)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                        const SizedBox(width: 4),
+                        const Text('Up to date', style: TextStyle(color: AppColors.success, fontSize: 12)),
                       ]),
                     ),
                   ]),
@@ -158,17 +202,14 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ],
             ),
 
-            // Clear cache confirm
-            if (_showClearConfirm) _buildClearConfirm(),
+            if (_showClearConfirm) _buildClearConfirm(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _sectionLabel(String text) => SectionLabel(text);
-
-  Widget _themeOption(String value, String label, IconData icon) {
+  Widget _themeOption(BuildContext context, String value, String label, IconData icon) {
     final c = AppColors.of(context);
     final selected = _theme == value;
     return Expanded(
@@ -179,16 +220,16 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? AppColors.accent.withValues(alpha: 0.15) : c.surfaceDark.withValues(alpha: 0.4),
-            border: Border.all(color: selected ? AppColors.accent.withValues(alpha: 0.5) : c.borderDefault),
+            color: selected ? c.accent.withValues(alpha: 0.15) : c.surfaceDark.withValues(alpha: 0.4),
+            border: Border.all(color: selected ? c.accent.withValues(alpha: 0.5) : c.borderDefault),
           ),
           child: Column(children: [
-            Icon(icon, size: 20, color: selected ? AppColors.accent : c.textSecondary),
+            Icon(icon, size: 20, color: selected ? c.accent : c.textSecondary),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(color: selected ? AppColors.accent : c.textSecondary, fontSize: 12)),
+            Text(label, style: TextStyle(color: selected ? c.accent : c.textSecondary, fontSize: 12)),
             if (selected) ...[
               const SizedBox(height: 6),
-              Container(width: 6, height: 6, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent)),
+              Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent)),
             ],
           ]),
         ),
@@ -196,31 +237,33 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  Widget _settingRow(String label, String desc, String value, {IconData? icon}) {
+  Widget _settingRow(BuildContext context, String label, String desc, String value, {IconData? icon}) {
+    final c = AppColors.of(context);
     return Row(children: [
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+        Text(label, style: TextStyle(color: c.textPrimary, fontSize: 14)),
         const SizedBox(height: 2),
-        Text(desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+        Text(desc, style: TextStyle(color: c.textSecondary, fontSize: 12)),
       ])),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: AppColors.surfaceDark.withValues(alpha: 0.6),
-          border: Border.all(color: AppColors.borderDefault),
+          color: c.surfaceDark.withValues(alpha: 0.6),
+          border: Border.all(color: c.borderDefault),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, size: 16, color: AppColors.textSecondary), const SizedBox(width: 4)],
-          Text(value, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+          if (icon != null) ...[Icon(icon, size: 16, color: c.textSecondary), const SizedBox(width: 4)],
+          Text(value, style: TextStyle(color: c.textPrimary, fontSize: 14)),
           const SizedBox(width: 4),
-          const Icon(Icons.chevron_right, size: 16, color: AppColors.textSecondary),
+          Icon(Icons.chevron_right, size: 16, color: c.textSecondary),
         ]),
       ),
     ]);
   }
 
-  Widget _toggleRow(_Item item, bool enabled, VoidCallback onToggle) {
+  Widget _toggleRow(BuildContext context, _Item item, bool enabled, VoidCallback onToggle) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(children: [
@@ -231,9 +274,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(item.label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+          Text(item.label, style: TextStyle(color: c.textPrimary, fontSize: 14)),
           const SizedBox(height: 2),
-          Text(item.desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
+          Text(item.desc, style: TextStyle(color: c.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
         ])),
         const SizedBox(width: 8),
         AppToggle(enabled: enabled, onChanged: onToggle),
@@ -241,7 +284,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  Widget _actionRow(IconData icon, Color color, String label, String desc, VoidCallback onTap) {
+  Widget _actionRow(BuildContext context, IconData icon, Color color, String label, String desc, VoidCallback onTap) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Padding(
@@ -254,17 +298,18 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: TextStyle(color: color == AppColors.destructive ? color : AppColors.textPrimary, fontSize: 14)),
+            Text(label, style: TextStyle(color: color == AppColors.destructive ? color : c.textPrimary, fontSize: 14)),
             const SizedBox(height: 2),
-            Text(desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            Text(desc, style: TextStyle(color: c.textSecondary, fontSize: 12)),
           ])),
-          Icon(Icons.chevron_right, size: 16, color: AppColors.textSecondary),
+          Icon(Icons.chevron_right, size: 16, color: c.textSecondary),
         ]),
       ),
     );
   }
 
-  Widget _buildClearConfirm() {
+  Widget _buildClearConfirm(BuildContext context) {
+    final c = AppColors.of(context);
     return Positioned.fill(
       child: GestureDetector(
         onTap: () => setState(() => _showClearConfirm = false),
@@ -279,11 +324,11 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [AppColors.surfaceLight, AppColors.surfaceDark]),
-                  border: Border.all(color: AppColors.borderDefault),
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [c.surfaceLight, c.surfaceDark]),
+                  border: Border.all(color: c.borderDefault),
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Container(width: 40, height: 4, decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: Colors.white.withValues(alpha: 0.2))),
+                  Container(width: 40, height: 4, decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: c.textSecondary.withValues(alpha: 0.3))),
                   const SizedBox(height: 20),
                   Row(children: [
                     Container(
@@ -292,20 +337,20 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                       child: const Icon(Icons.delete_outline, size: 20, color: AppColors.destructive),
                     ),
                     const SizedBox(width: 12),
-                    const Text('Clear Cache?', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text('Clear Cache?', style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   ]),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'This will clear locally cached data (chart thumbnails, recent search history). Your transactions and account data will not be affected.',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+                    style: TextStyle(color: c.textSecondary, fontSize: 14, height: 1.5),
                   ),
                   const SizedBox(height: 20),
                   Row(children: [
                     Expanded(child: OutlinedButton(
                       onPressed: () => setState(() => _showClearConfirm = false),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textPrimary,
-                        side: BorderSide(color: AppColors.borderDefault),
+                        foregroundColor: c.textPrimary,
+                        side: BorderSide(color: c.borderDefault),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),

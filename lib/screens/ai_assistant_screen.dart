@@ -62,7 +62,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                 width: 48, height: 48,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(colors: [AppColors.accent, AppColors.primaryGreen]),
+                  gradient: LinearGradient(colors: [c.accent, AppColors.primaryGreen]),
                 ),
                 child: Icon(Icons.auto_awesome, size: 24, color: c.background),
               ),
@@ -117,7 +117,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                         ? Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: AppColors.accent,
+                              color: c.accent,
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -167,12 +167,12 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               GestureDetector(
                 onTap: _send,
                 child: Container(
                   width: 48, height: 48,
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent),
                   child: Icon(Icons.send_rounded, size: 20, color: c.background),
                 ),
               ),

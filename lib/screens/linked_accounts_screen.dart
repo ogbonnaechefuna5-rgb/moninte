@@ -108,7 +108,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: c.background,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
@@ -117,7 +117,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
-          color: AppColors.accent,
+          color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
             children: [
@@ -141,10 +141,10 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
                     child: Row(children: [
                       Container(
                         width: 48, height: 48,
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: AppColors.accent),
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: c.accent),
                         child: Center(child: Text(bankName.isNotEmpty ? bankName[0] : '?', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600))),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
                           Text(bankName, style: TextStyle(color: c.textPrimary)),
@@ -168,7 +168,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(shape: BoxShape.circle, color: c.surfaceLight.withValues(alpha: 0.6), border: Border.all(color: c.borderDefault)),
                             child: _syncingId == id
-                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
+                                ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: c.accent))
                                 : Icon(Icons.refresh, size: 14, color: c.textSecondary),
                           ),
                         ),
@@ -178,7 +178,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
                 );
               }),
 
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               GestureDetector(
                 onTap: _showAddSheet,
@@ -186,16 +186,16 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.3), width: 2, strokeAlign: BorderSide.strokeAlignInside),
+                    border: Border.all(color: c.accent.withValues(alpha: 0.3), width: 2, strokeAlign: BorderSide.strokeAlignInside),
                   ),
                   child: Column(children: [
                     Container(
                       width: 48, height: 48,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.15)),
-                      child: const Icon(Icons.add, size: 24, color: AppColors.accent),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent.withValues(alpha: 0.15)),
+                      child: Icon(Icons.add, size: 24, color: c.accent),
                     ),
                     const SizedBox(height: 8),
-                    const Text('Connect a bank account', style: TextStyle(color: AppColors.accent)),
+                    Text('Connect a bank account', style: TextStyle(color: c.accent)),
                     const SizedBox(height: 4),
                     Text('Supports all major Nigerian banks', style: TextStyle(color: c.textSecondary, fontSize: 12)),
                   ]),

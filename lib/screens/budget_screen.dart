@@ -49,7 +49,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: c.background,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
@@ -62,7 +62,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           children: [
             RefreshIndicator(
               onRefresh: _load,
-              color: AppColors.accent,
+              color: c.accent,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
                 children: [
@@ -110,11 +110,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: c.surfaceLight),
                               child: Center(child: Text(_categoryEmoji(category), style: const TextStyle(fontSize: 24))),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                                 Text(category, style: TextStyle(color: c.textPrimary)),
-                                StatusBadge(text: period, color: AppColors.accent),
+                                StatusBadge(text: period, color: c.accent),
                               ]),
                               const SizedBox(height: 8),
                               Text('₦${fmtNumber(amount.round())} limit', style: AppTheme.monoSized(14, color: c.textSecondary)),
@@ -136,8 +136,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: Container(
                   width: 56, height: 56,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.accent,
-                    boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.3), blurRadius: 16)],
+                    shape: BoxShape.circle, color: c.accent,
+                    boxShadow: [BoxShadow(color: c.accent.withValues(alpha: 0.3), blurRadius: 16)],
                   ),
                   child: Icon(Icons.add, size: 28, color: c.background),
                 ),
