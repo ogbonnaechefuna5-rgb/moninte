@@ -228,27 +228,24 @@ class _LoginFormState extends State<_LoginForm> {
           _loading
               ? Center(child: CircularProgressIndicator(color: c.accent))
               : PrimaryButton(label: 'Sign In', onTap: _submit),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: _QuickAuthButton(
-                  icon: _biometricType == BiometricType.face
-                      ? Icons.face_unlock_outlined
-                      : Icons.fingerprint,
-                  label: _biometricType == BiometricType.face ? 'Face ID' : 'Fingerprint',
-                  enabled: _biometricAvailable,
-                  onTap: _triggerBiometric,
-                ),
+              _QuickAuthButton(
+                icon: _biometricType == BiometricType.face
+                    ? Icons.face_unlock_outlined
+                    : Icons.fingerprint,
+                label: _biometricType == BiometricType.face ? 'Face ID' : 'Fingerprint',
+                enabled: _biometricAvailable,
+                onTap: _triggerBiometric,
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _QuickAuthButton(
-                  icon: Icons.pin_outlined,
-                  label: 'Passcode',
-                  enabled: true,
-                  onTap: _triggerPasscode,
-                ),
+              _QuickAuthButton(
+                icon: Icons.pin_outlined,
+                label: 'Passcode',
+                enabled: true,
+                onTap: _triggerPasscode,
               ),
             ],
           ),
@@ -464,18 +461,18 @@ class _QuickAuthButton extends StatelessWidget {
         opacity: enabled ? 1.0 : 0.35,
         duration: const Duration(milliseconds: 200),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: c.surfaceDark,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: enabled ? c.accent.withValues(alpha: 0.35) : c.borderDefault),
           ),
-          child: Column(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: enabled ? c.accent : c.textSecondary, size: 26),
-              const SizedBox(height: 6),
-              Text(label, style: TextStyle(color: enabled ? c.textPrimary : c.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
+              Icon(icon, color: enabled ? c.accent : c.textSecondary, size: 18),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(color: enabled ? c.textPrimary : c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
             ],
           ),
         ),

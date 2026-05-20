@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/screen_header.dart';
 import '../widgets/status_badge.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
@@ -66,7 +65,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
                 children: [
-                  const ScreenHeader(title: 'Budget', subtitle: 'Track your spending limits'),
+                  Text('Budget', style: Theme.of(context).textTheme.displayMedium),
+                  const SizedBox(height: 4),
+                  Text('Track your spending limits', style: TextStyle(color: c.textSecondary, fontSize: 14)),
                   const SizedBox(height: 20),
 
                   // Month nav

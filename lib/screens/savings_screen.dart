@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/screen_header.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
 
@@ -57,7 +56,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
-              const ScreenHeader(title: 'Savings Goals', subtitle: 'Track your financial targets'),
+              Text('Savings Goals', style: Theme.of(context).textTheme.displayMedium),
+              const SizedBox(height: 4),
+              Text('Track your financial targets', style: TextStyle(color: c.textSecondary, fontSize: 14)),
               SizedBox(height: 20),
 
               // Summary card

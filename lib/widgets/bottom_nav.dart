@@ -4,17 +4,19 @@ import '../theme/app_theme.dart';
 class BottomNav extends StatelessWidget {
   final String active;
   final ValueChanged<String> onNavigate;
+  final VoidCallback onMore;
 
   const BottomNav({
     super.key,
     required this.active,
     required this.onNavigate,
+    required this.onMore,
   });
 
   static const List<_NavItem> _items = [
     _NavItem(id: 'home', label: 'Home', icon: Icons.home_rounded),
     _NavItem(id: 'analytics', label: 'Analytics', icon: Icons.bar_chart_rounded),
-    _NavItem(id: 'ai', label: 'AI', icon: Icons.auto_awesome_rounded),
+    _NavItem(id: 'ingest', label: 'Import', icon: Icons.upload_rounded),
     _NavItem(id: 'budget', label: 'Budget', icon: Icons.account_balance_wallet_rounded),
     _NavItem(id: 'savings', label: 'Savings', icon: Icons.track_changes_rounded),
   ];
@@ -33,11 +35,14 @@ class BottomNav extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: _items.map((item) => _NavButton(
-              item: item,
-              isActive: active == item.id,
-              onTap: () => onNavigate(item.id),
-            )).toList(),
+            children: [
+              ..._items.map((item) => _NavButton(
+                item: item,
+                isActive: active == item.id,
+                onTap: () => onNavigate(item.id),
+              )),
+              _MoreButton(onTap: onMore),
+            ],
           ),
         ),
       ),
@@ -106,4 +111,31 @@ class _NavItem {
   final String label;
   final IconData icon;
   const _NavItem({required this.id, required this.label, required this.icon});
+}
+
+class _MoreButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _MoreButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 2, width: 0,
+            margin: const EdgeInsets.only(bottom: 4),
+          ),
+          Icon(Icons.more_horiz_rounded, size: 22, color: c.textSecondary),
+          const SizedBox(height: 2),
+          Text('More', style: TextStyle(fontSize: 10, color: c.textSecondary)),
+        ],
+      ),
+    );
+  }
 }

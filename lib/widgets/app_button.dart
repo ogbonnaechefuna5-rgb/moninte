@@ -4,9 +4,9 @@ import '../theme/app_theme.dart';
 /// Full-width primary button with the app accent colour.
 class PrimaryButton extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
-  const PrimaryButton({super.key, required this.label, required this.onTap});
+  const PrimaryButton({super.key, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {

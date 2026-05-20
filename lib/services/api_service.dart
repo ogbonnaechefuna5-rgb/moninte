@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ApiService {
@@ -126,6 +127,9 @@ class ApiService {
   static Future<Map<String, dynamic>> getTransactions({int page = 1, int limit = 20}) =>
       _get('/transactions?page=$page&limit=$limit');
 
+  static Future<Map<String, dynamic>> ingestSMSBatch(List<String> messages) =>
+      _post('/transactions/ingest/sms/batch', {'messages': messages});
+
   static Future<Map<String, dynamic>> ingestManual({
     required double amount,
     required String type,
@@ -140,6 +144,21 @@ class ApiService {
         if (category != null) 'category': category,
         if (description != null) 'description': description,
       });
+
+  static Future<Map<String, dynamic>> uploadStatement(File file) async {
+    final uri = Uri.parse('$_base/transactions/ingest/upload');
+    final req = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_headers)
+      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+    final streamed = await req.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 401) throw Exception('unauthorized');
+    if (res.statusCode != 200 && res.statusCode != 201 && res.statusCode != 202) {
+      final b = jsonDecode(res.body);
+      throw Exception(b['error'] ?? 'Upload failed');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 
   // ── Profile ──
   static Future<Map<String, dynamic>> getProfile() => _get('/user/profile');

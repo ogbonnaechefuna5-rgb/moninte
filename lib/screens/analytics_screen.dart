@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/screen_header.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
 
@@ -61,7 +60,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
-              const ScreenHeader(title: 'Analytics', subtitle: 'Spending insights'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                child: Text('Analytics', style: Theme.of(context).textTheme.displayMedium),
+              ),
+              Text('Spending insights', style: TextStyle(color: c.textSecondary, fontSize: 14)),
               SizedBox(height: 20),
 
               // Period pills

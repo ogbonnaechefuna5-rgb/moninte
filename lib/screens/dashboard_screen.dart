@@ -8,9 +8,11 @@ import '../widgets/notification_pane.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
 import '../providers/preferences_provider.dart';
+import '../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final VoidCallback? onProfileTap;
+  const DashboardScreen({super.key, this.onProfileTap});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -39,6 +41,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final hideBalances = context.watch<PreferencesProvider>().hideBalances;
+    final user = context.watch<AuthProvider>().user;
+    final firstName = user?['first_name'] as String? ?? '';
+    final lastName = user?['last_name'] as String? ?? '';
+    final initials = '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'.toUpperCase();
+    final greeting = _greeting();
 
     if (_loading) {
       return Scaffold(
@@ -72,9 +79,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
+              // ── Greeting header ──
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$greeting,\n${firstName.isNotEmpty ? firstName : 'there'} 👋',
+                          style: Theme.of(context).textTheme.displayMedium?.copyWith(height: 1.2),
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Here\'s your financial overview', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Notification bell
                   GestureDetector(
                     onTap: () => showModalBottomSheet(
                       context: context,
@@ -85,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Stack(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: c.surfaceDark.withValues(alpha: 0.5),
@@ -98,6 +121,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Container(width: 8, height: 8, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.destructive)),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Avatar
+                  GestureDetector(
+                    onTap: widget.onProfileTap,
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: c.accent.withValues(alpha: 0.15),
+                        border: Border.all(color: c.accent.withValues(alpha: 0.4)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          initials.isNotEmpty ? initials : '?',
+                          style: TextStyle(color: c.accent, fontSize: 14, fontWeight: FontWeight.w700),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -321,6 +363,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   Widget _bankBadge(String name) {
