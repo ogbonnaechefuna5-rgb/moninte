@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class PreferencesProvider extends ChangeNotifier {
+  final ApiService _api;
+
   bool transactionAlerts = true;
   bool budgetWarnings    = true;
   bool aiInsights        = true;
@@ -15,7 +17,7 @@ class PreferencesProvider extends ChangeNotifier {
   bool biometricEnabled  = false;
   bool passcodeEnabled   = false;
 
-  PreferencesProvider() {
+  PreferencesProvider(this._api) {
     _loadLocal().then((_) => _fetchRemote());
   }
 
@@ -41,7 +43,7 @@ class PreferencesProvider extends ChangeNotifier {
 
   Future<void> _fetchRemote() async {
     try {
-      final data = await ApiService.getPreferences();
+      final data = await _api.getPreferences();
       final p = data['preferences'] as Map<String, dynamic>? ?? data;
       transactionAlerts = p['transaction_alerts'] as bool? ?? transactionAlerts;
       budgetWarnings    = p['budget_warnings']    as bool? ?? budgetWarnings;
@@ -123,10 +125,7 @@ class PreferencesProvider extends ChangeNotifier {
 
   Future<void> _saveRemote() async {
     try {
-      await ApiService.savePreferences({
-        'sms_detection':       shareAnalytics,
-        'analytics':           shareAnalytics,
-        'partner_offers':      promotions,
+      await _api.savePreferences({
         'transaction_alerts':  transactionAlerts,
         'budget_warnings':     budgetWarnings,
         'ai_insights':         aiInsights,
@@ -134,6 +133,7 @@ class PreferencesProvider extends ChangeNotifier {
         'savings_reminders':   savingsReminders,
         'promotions':          promotions,
         'hide_balances':       hideBalances,
+        'share_analytics':     shareAnalytics,
         'crash_reports':       crashReports,
       });
     } catch (_) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
@@ -9,10 +10,10 @@ import '../widgets/passcode_screen.dart';
 import '../providers/theme_provider.dart';
 import '../providers/preferences_provider.dart';
 import '../services/biometric_service.dart';
+import '../router.dart';
 
 class PreferencesScreen extends StatefulWidget {
-  final VoidCallback onBack;
-  const PreferencesScreen({super.key, required this.onBack});
+  const PreferencesScreen({super.key});
 
   @override
   State<PreferencesScreen> createState() => _PreferencesScreenState();
@@ -83,7 +84,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ListView(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
               children: [
-                ScreenHeader(title: 'Preferences', subtitle: 'Customise your Moninte experience', onBack: widget.onBack),
+                ScreenHeader(title: 'Preferences', subtitle: 'Customise your Moninte experience', onBack: () => context.go(Routes.profile)),
                 const SizedBox(height: 24),
 
                 // ── Display ──

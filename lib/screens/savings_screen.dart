@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../services/api_service.dart';
+import '../widgets/screen_header.dart';
+import '../providers/savings_provider.dart';
 import '../utils/formatters.dart';
 
 class SavingsScreen extends StatefulWidget {
@@ -12,29 +14,21 @@ class SavingsScreen extends StatefulWidget {
 }
 
 class _SavingsScreenState extends State<SavingsScreen> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final data = await ApiService.getSavings();
-      if (mounted) setState(() { _data = data; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<SavingsProvider>().load(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final savings = context.watch<SavingsProvider>();
+    final _data = savings.data;
 
-    if (_loading) {
+    if (savings.loading && _data == null) {
       return Scaffold(
         backgroundColor: c.background,
         body: Center(child: CircularProgressIndicator(color: c.accent)),
@@ -51,14 +45,12 @@ class _SavingsScreenState extends State<SavingsScreen> {
       backgroundColor: c.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: () => context.read<SavingsProvider>().load(force: true),
           color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
-              Text('Savings Goals', style: Theme.of(context).textTheme.displayMedium),
-              const SizedBox(height: 4),
-              Text('Track your financial targets', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+              const ScreenHeader(title: 'Savings Goals', subtitle: 'Track your financial targets'),
               SizedBox(height: 20),
 
               // Summary card

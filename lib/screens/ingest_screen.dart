@@ -5,11 +5,13 @@ import 'package:permission_handler/permission_handler.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_button.dart';
+import 'package:provider/provider.dart';
 import '../services/sms_service.dart';
 import '../services/api_service.dart';
 
 class IngestScreen extends StatefulWidget {
-  const IngestScreen({super.key});
+  final void Function(bool)? onPickerActive;
+  const IngestScreen({super.key, this.onPickerActive});
 
   @override
   State<IngestScreen> createState() => _IngestScreenState();
@@ -76,9 +78,9 @@ class _IngestScreenState extends State<IngestScreen> with SingleTickerProviderSt
             Expanded(
               child: TabBarView(
                 controller: _tab,
-                children: const [
-                  _SmsTab(),
-                  _UploadTab(),
+                children: [
+                  const _SmsTab(),
+                  _UploadTab(onPickerActive: widget.onPickerActive),
                 ],
               ),
             ),
@@ -129,7 +131,7 @@ class _SmsTabState extends State<_SmsTab> {
     setState(() { _sending = true; _result = null; });
     final bodies = _selected.map((i) => _messages[i].body).toList();
     try {
-      final res = await ApiService.ingestSMSBatch(bodies);
+      final res = await context.read<ApiService>().ingestSMSBatch(bodies);
       if (!mounted) return;
       final count = res['processed'] ?? bodies.length;
       setState(() { _result = 'Synced $count transaction${count != 1 ? 's' : ''}'; _sending = false; });
@@ -258,7 +260,7 @@ class _SmsTabState extends State<_SmsTab> {
                     label: 'Sync ${_selected.length} Message${_selected.length != 1 ? 's' : ''}',
                     onTap: _selected.isEmpty ? null : _send,
                   ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 100),
           ] else if (!_loading) ...[
             const Spacer(),
             Center(child: Column(children: [
@@ -277,22 +279,29 @@ class _SmsTabState extends State<_SmsTab> {
 // ── Upload Tab ────────────────────────────────────────────────────────────────
 
 class _UploadTab extends StatefulWidget {
-  const _UploadTab();
+  final void Function(bool)? onPickerActive;
+  const _UploadTab({this.onPickerActive});
 
   @override
   State<_UploadTab> createState() => _UploadTabState();
 }
 
-class _UploadTabState extends State<_UploadTab> {
+class _UploadTabState extends State<_UploadTab> with AutomaticKeepAliveClientMixin {
   File? _file;
   bool _uploading = false;
   String? _result;
 
+  @override
+  bool get wantKeepAlive => _uploading;
+
   Future<void> _pick() async {
+    widget.onPickerActive?.call(true);
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'csv'],
+      allowedExtensions: ['csv', 'pdf', 'xlsx'],
     );
+    widget.onPickerActive?.call(false);
+    if (!mounted) return;
     if (result == null || result.files.single.path == null) return;
     setState(() { _file = File(result.files.single.path!); _result = null; });
   }
@@ -300,8 +309,9 @@ class _UploadTabState extends State<_UploadTab> {
   Future<void> _upload() async {
     if (_file == null) return;
     setState(() { _uploading = true; _result = null; });
+    final file = _file!;
     try {
-      final res = await ApiService.uploadStatement(_file!);
+      final res = await context.read<ApiService>().uploadStatement(file);
       if (!mounted) return;
       final count = res['processed'] ?? 0;
       setState(() { _result = 'Imported $count transaction${count != 1 ? 's' : ''}'; _uploading = false; _file = null; });
@@ -312,122 +322,125 @@ class _UploadTabState extends State<_UploadTab> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final c = AppColors.of(context);
     final fileName = _file?.path.split('/').last;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          GlassCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(children: [
-              Icon(Icons.upload_file_outlined, size: 40, color: c.accent),
-              const SizedBox(height: 12),
-              Text('Upload Bank Statement', style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Text('Supports PDF and CSV formats', style: TextStyle(color: c.textSecondary, fontSize: 13)),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: _pick,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: c.accent.withValues(alpha: 0.4), style: BorderStyle.solid),
-                    color: c.accent.withValues(alpha: 0.05),
-                  ),
-                  child: Column(children: [
-                    Icon(Icons.folder_open_outlined, size: 24, color: c.accent),
-                    const SizedBox(height: 6),
-                    Text(fileName ?? 'Choose file', style: TextStyle(color: c.accent, fontSize: 14)),
-                  ]),
-                ),
-              ),
-            ]),
-          ),
-
-          if (_file != null) ...[
-            const SizedBox(height: 12),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: Column(
+          children: [
             GlassCard(
-              padding: const EdgeInsets.all(14),
-              border: Border.all(color: c.accent.withValues(alpha: 0.3)),
-              child: Row(children: [
-                Icon(
-                  fileName!.endsWith('.pdf') ? Icons.picture_as_pdf : Icons.table_chart_outlined,
+              padding: const EdgeInsets.all(20),
+              child: Column(children: [
+                Icon(Icons.upload_file_outlined, size: 40, color: c.accent),
+                const SizedBox(height: 12),
+                Text('Upload Bank Statement', style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Text('Supports CSV, PDF and XLSX formats', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: _pick,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.accent.withValues(alpha: 0.4), style: BorderStyle.solid),
+                      color: c.accent.withValues(alpha: 0.05),
+                    ),
+                    child: Column(children: [
+                      Icon(Icons.folder_open_outlined, size: 24, color: c.accent),
+                      const SizedBox(height: 6),
+                      Text(fileName ?? 'Choose CSV, PDF or XLSX file', style: TextStyle(color: c.accent, fontSize: 14)),
+                    ]),
+                  ),
+                ),
+              ]),
+            ),
+
+            if (_file != null) ...[
+              const SizedBox(height: 12),
+              GlassCard(
+                padding: const EdgeInsets.all(14),
+                border: Border.all(color: c.accent.withValues(alpha: 0.3)),
+                child: Row(children: [
+                  Icon(
+                  fileName!.toLowerCase().endsWith('.pdf')
+                      ? Icons.picture_as_pdf_outlined
+                      : fileName!.toLowerCase().endsWith('.xlsx')
+                          ? Icons.table_chart_outlined
+                          : Icons.description_outlined,
                   size: 20,
                   color: c.accent,
                 ),
-                const SizedBox(width: 10),
-                Expanded(child: Text(fileName, style: TextStyle(color: c.textPrimary, fontSize: 13), overflow: TextOverflow.ellipsis)),
-                GestureDetector(
-                  onTap: () => setState(() { _file = null; _result = null; }),
-                  child: Icon(Icons.close, size: 18, color: c.textSecondary),
-                ),
-              ]),
-            ),
-          ],
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(fileName!, style: TextStyle(color: c.textPrimary, fontSize: 13), overflow: TextOverflow.ellipsis)),
+                  GestureDetector(
+                    onTap: () => setState(() { _file = null; _result = null; }),
+                    child: Icon(Icons.close, size: 18, color: c.textSecondary),
+                  ),
+                ]),
+              ),
+            ],
 
-          if (_result != null) ...[
-            const SizedBox(height: 12),
-            GlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: Border.all(color: _result!.startsWith('Imported')
-                  ? AppColors.success.withValues(alpha: 0.3)
-                  : AppColors.destructive.withValues(alpha: 0.3)),
-              child: Row(children: [
-                Icon(
-                  _result!.startsWith('Imported') ? Icons.check_circle_outline : Icons.error_outline,
-                  size: 16,
-                  color: _result!.startsWith('Imported') ? AppColors.success : AppColors.destructive,
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_result!, style: TextStyle(
-                  color: _result!.startsWith('Imported') ? AppColors.success : AppColors.destructive,
-                  fontSize: 13,
-                ))),
-              ]),
-            ),
-          ],
-
-          const SizedBox(height: 20),
-
-          if (_uploading)
-            Center(child: CircularProgressIndicator(color: c.accent))
-          else if (_file != null)
-            PrimaryButton(label: 'Upload & Import', onTap: _upload),
-
-          const SizedBox(height: 24),
-
-          GlassCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const Icon(Icons.info_outline, size: 16, color: AppColors.warning),
-                const SizedBox(width: 8),
-                Text('Supported formats', style: TextStyle(color: c.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
-              ]),
-              const SizedBox(height: 10),
-              ...[
-                ('PDF', 'Bank statement PDF from GTBank, Access, Zenith, UBA, etc.'),
-                ('CSV', 'Exported transaction CSV from your bank\'s app or internet banking'),
-              ].map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: c.accent.withValues(alpha: 0.1)),
-                    child: Text(item.$1, style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w600)),
+            if (_result != null) ...[
+              const SizedBox(height: 12),
+              GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border: Border.all(color: _result!.startsWith('Imported')
+                    ? AppColors.success.withValues(alpha: 0.3)
+                    : AppColors.destructive.withValues(alpha: 0.3)),
+                child: Row(children: [
+                  Icon(
+                    _result!.startsWith('Imported') ? Icons.check_circle_outline : Icons.error_outline,
+                    size: 16,
+                    color: _result!.startsWith('Imported') ? AppColors.success : AppColors.destructive,
                   ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(item.$2, style: TextStyle(color: c.textSecondary, fontSize: 12))),
+                  Expanded(child: Text(_result!, style: TextStyle(
+                    color: _result!.startsWith('Imported') ? AppColors.success : AppColors.destructive,
+                    fontSize: 13,
+                  ))),
                 ]),
-              )),
-            ]),
-          ),
-        ],
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            if (_uploading)
+              Center(child: CircularProgressIndicator(color: c.accent))
+            else if (_file != null)
+              PrimaryButton(label: 'Upload & Import', onTap: _upload),
+
+            const SizedBox(height: 24),
+
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.info_outline, size: 16, color: AppColors.warning),
+                  const SizedBox(width: 8),
+                  Text('CSV & PDF format', style: TextStyle(color: c.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+                ]),
+                const SizedBox(height: 10),
+                Text(
+                  'Export your transaction history as CSV or PDF from your bank\'s app or internet banking portal (GTBank, Access, Zenith, UBA, Kuda, etc.) and upload here.',
+                  style: TextStyle(color: c.textSecondary, fontSize: 12, height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'CSV: date, amount, type (debit/credit), merchant\nPDF: standard bank statement format\nXLSX: exported from bank portal or Excel',
+                  style: TextStyle(color: c.textSecondary, fontSize: 12, height: 1.5),
+                ),
+              ]),
+            ),
+          ],
+        ),
       ),
     );
   }

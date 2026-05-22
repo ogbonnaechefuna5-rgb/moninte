@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/screen_header.dart';
 import '../widgets/status_badge.dart';
-import '../services/api_service.dart';
 import '../utils/formatters.dart';
+import '../widgets/app_button.dart';
+import 'package:provider/provider.dart';
+import '../providers/category_provider.dart';
+import '../providers/budget_provider.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -13,24 +17,14 @@ class BudgetScreen extends StatefulWidget {
 }
 
 class _BudgetScreenState extends State<BudgetScreen> {
-  List<Map<String, dynamic>> _budgets = [];
-  bool _loading = true;
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final data = await ApiService.getBudgets();
-      final list = (data['budgets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      if (mounted) setState(() { _budgets = list; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<BudgetProvider>().load(),
+    );
   }
 
   void _changeMonth(int delta) {
@@ -44,8 +38,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final budget = context.watch<BudgetProvider>();
+    final _budgets = budget.budgets;
 
-    if (_loading) {
+    if (budget.loading && _budgets.isEmpty) {
       return Scaffold(
         backgroundColor: c.background,
         body: Center(child: CircularProgressIndicator(color: c.accent)),
@@ -60,14 +56,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
         child: Stack(
           children: [
             RefreshIndicator(
-              onRefresh: _load,
+              onRefresh: () => context.read<BudgetProvider>().load(force: true),
               color: c.accent,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
                 children: [
-                  Text('Budget', style: Theme.of(context).textTheme.displayMedium),
-                  const SizedBox(height: 4),
-                  Text('Track your spending limits', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+                  const ScreenHeader(title: 'Budget', subtitle: 'Track your spending limits'),
                   const SizedBox(height: 20),
 
                   // Month nav
@@ -131,9 +125,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             Positioned(
               bottom: 96, right: 24,
               child: GestureDetector(
-                onTap: () {
-                  // TODO: show create budget sheet
-                },
+                onTap: _showCreateBudget,
                 child: Container(
                   width: 56, height: 56,
                   decoration: BoxDecoration(
@@ -159,15 +151,101 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  String _categoryEmoji(String category) {
-    switch (category.toLowerCase()) {
-      case 'food': case 'food & dining': return '🍔';
-      case 'transport': case 'transportation': return '🚗';
-      case 'shopping': return '🛍️';
-      case 'bills': case 'utilities': return '⚡';
-      case 'airtime': return '📱';
-      case 'entertainment': return '🎬';
-      default: return '📦';
-    }
+  String _categoryEmoji(String category) =>
+      context.read<CategoryProvider>().forName(category).icon;
+
+  Future<void> _showCreateBudget() async {
+    final cats = context.read<CategoryProvider>().categories;
+    String? selectedCat;
+    double? amount;
+    final amountCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          final c = AppColors.of(ctx);
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              decoration: BoxDecoration(
+                color: c.surfaceDark,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: c.borderDefault),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: c.textSecondary.withValues(alpha: 0.3)))),
+                  const SizedBox(height: 20),
+                  Text('Create Budget', style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 16),
+                  Text('Category', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8, runSpacing: 8,
+                    children: cats.map((cat) {
+                      final selected = selectedCat == cat.name;
+                      return GestureDetector(
+                        onTap: () => setModal(() => selectedCat = cat.name),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: selected ? cat.color.withValues(alpha: 0.2) : c.surfaceLight.withValues(alpha: 0.4),
+                            border: Border.all(color: selected ? cat.color : c.borderDefault),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Text(cat.icon, style: const TextStyle(fontSize: 14)),
+                            const SizedBox(width: 6),
+                            Text(cat.name, style: TextStyle(color: selected ? cat.color : c.textPrimary, fontSize: 13)),
+                          ]),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Monthly Limit (₦)', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(color: c.surfaceLight.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(12), border: Border.all(color: c.borderDefault)),
+                    child: TextField(
+                      controller: amountCtrl,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(color: c.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        hintStyle: TextStyle(color: c.textSecondary),
+                        prefixText: '₦ ',
+                        prefixStyle: TextStyle(color: c.textSecondary),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                      onChanged: (v) => amount = double.tryParse(v),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  PrimaryButton(
+                    label: 'Create Budget',
+                    onTap: () async {
+                      if (selectedCat == null || amount == null || amount! <= 0) return;
+                      Navigator.pop(ctx);
+                      try {
+                        await context.read<BudgetProvider>().create(selectedCat!, amount!, 'monthly');
+                      } catch (_) {}
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    amountCtrl.dispose();
   }
 }

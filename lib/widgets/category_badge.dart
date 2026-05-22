@@ -1,49 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/category_provider.dart';
 
 class CategoryBadge extends StatelessWidget {
   final String category;
-
   const CategoryBadge({super.key, required this.category});
-
-  static const Map<String, _BadgeColors> _colorMap = {
-    'Food': _BadgeColors(Color(0x33FF8C42), Color(0xFFFF8C42), Color(0x4DFF8C42)),
-    'Transport': _BadgeColors(Color(0x334D9FFF), Color(0xFF4D9FFF), Color(0x4D4D9FFF)),
-    'Bills': _BadgeColors(Color(0x33A855F7), Color(0xFFA855F7), Color(0x4DA855F7)),
-    'Airtime': _BadgeColors(Color(0x33FFB830), Color(0xFFFFB830), Color(0x4DFFB830)),
-    'Shopping': _BadgeColors(Color(0x33FF69B4), Color(0xFFFF69B4), Color(0x4DFF69B4)),
-    'Entertainment': _BadgeColors(Color(0x334DFF91), Color(0xFF4DFF91), Color(0x4D4DFF91)),
-  };
-
-  static const _BadgeColors _defaultColors =
-      _BadgeColors(Color(0x338A9E90), Color(0xFF8A9E90), Color(0x4D8A9E90));
 
   @override
   Widget build(BuildContext context) {
-    final colors = _colorMap[category] ?? _defaultColors;
-
+    final cat = context.watch<CategoryProvider>().forName(category);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: colors.background,
+        color: cat.color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: cat.color.withValues(alpha: 0.35)),
       ),
       child: Text(
         category,
-        style: TextStyle(
-          color: colors.text,
-          fontSize: 12,
-          fontWeight: FontWeight.w400,
-        ),
+        style: TextStyle(color: cat.color, fontSize: 12, fontWeight: FontWeight.w400),
       ),
     );
   }
 }
 
-class _BadgeColors {
-  final Color background;
-  final Color text;
-  final Color border;
+// Convenience helper used by screens that need icon/color without a widget
+class CategoryHelper {
+  static String icon(BuildContext context, String name) =>
+      context.read<CategoryProvider>().forName(name).icon;
 
-  const _BadgeColors(this.background, this.text, this.border);
+  static Color color(BuildContext context, String name) =>
+      context.read<CategoryProvider>().forName(name).color;
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Standard screen header with a circular back button, title, and optional subtitle.
 class ScreenHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -21,27 +20,28 @@ class ScreenHeader extends StatelessWidget {
     final c = AppColors.of(context);
     return Row(
       children: [
-        GestureDetector(
-          onTap: onBack,
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: c.surfaceDark.withValues(alpha: 0.5),
-              border: Border.all(color: c.borderDefault),
+        if (onBack != null) ...[
+          GestureDetector(
+            onTap: onBack,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.surfaceDark.withValues(alpha: 0.5),
+                border: Border.all(color: c.borderDefault),
+              ),
+              child: Icon(Icons.arrow_back, size: 20, color: c.textPrimary),
             ),
-            child: Icon(Icons.arrow_back, size: 20, color: c.textPrimary),
           ),
-        ),
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
+        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: Theme.of(context).textTheme.headlineLarge),
               if (subtitle != null)
-                Text(subtitle!,
-                    style: TextStyle(color: c.textSecondary, fontSize: 14)),
+                Text(subtitle!, style: TextStyle(color: c.textSecondary, fontSize: 14)),
             ],
           ),
         ),

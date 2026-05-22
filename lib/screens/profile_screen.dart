@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
+import '../router.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
 import '../widgets/app_button.dart';
@@ -11,11 +14,11 @@ import '../widgets/section_label.dart';
 import '../services/biometric_service.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/preferences_provider.dart';
 import '../widgets/passcode_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final ValueChanged<String> onNavigate;
-  const ProfileScreen({super.key, required this.onNavigate});
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -24,41 +27,36 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _smsEnabled = true;
   bool _analyticsEnabled = true;
-  bool _biometricEnabled = false;
-  bool _passcodeEnabled = false;
   bool _loading = true;
+  bool _avatarUploading = false;
 
+  String _firstName = '';
+  String _middleName = '';
+  String _lastName  = '';
   String _name = '';
   String _phone = '';
   String _email = '';
+  String _avatarUrl = '';
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
-    _loadSecurityPrefs();
-  }
-
-  Future<void> _loadSecurityPrefs() async {
-    final p = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _biometricEnabled = p.getBool('biometric_enabled') ?? false;
-      _passcodeEnabled  = p.getString('app_passcode') != null;
-    });
   }
 
   Future<void> _loadProfile() async {
     try {
-      final data = await ApiService.getProfile();
+      final data = await context.read<ApiService>().getProfile();
       final user = data['user'] as Map<String, dynamic>? ?? data;
       if (mounted) {
         setState(() {
-          final first = user['first_name'] ?? '';
-          final last = user['last_name'] ?? '';
-          _name = '$first $last'.trim();
-          _phone = user['phone'] ?? '';
-          _email = user['email'] ?? '';
+          _firstName = user['first_name'] as String? ?? '';
+          _middleName = user['middle_name'] as String? ?? '';
+          _lastName  = user['last_name']  as String? ?? '';
+          _name = '$_firstName $_lastName'.trim();
+          _phone = user['phone'] as String? ?? '';
+          _email = user['email'] as String? ?? '';
+          _avatarUrl = context.read<ApiService>().resolveUrl(user['avatar_url'] as String? ?? '');
           _loading = false;
         });
       }
@@ -67,7 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     // Load preferences
     try {
-      final prefs = await ApiService.getPreferences();
+      final prefs = await context.read<ApiService>().getPreferences();
       final p = prefs['preferences'] as Map<String, dynamic>? ?? prefs;
       if (mounted) {
         setState(() {
@@ -87,85 +85,112 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '?';
   }
 
-  Future<void> _toggleBiometric(bool enable) async {
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 512);
+    if (picked == null || !mounted) return;
+    setState(() => _avatarUploading = true);
+    try {
+      final url = await context.read<ApiService>().uploadAvatar(File(picked.path));
+      if (mounted) setState(() { _avatarUrl = context.read<ApiService>().resolveUrl(url); _avatarUploading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _avatarUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
+  }
+  Future<void> _toggleBiometric(PreferencesProvider prefs) async {
+    if (prefs.biometricEnabled) {
+      await prefs.setSecurity('biometricEnabled', false);
+      return;
+    }
     final available = await BiometricService.isAvailable();
+    if (!mounted) return;
     if (!available) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Biometrics not available on this device')),
       );
       return;
     }
-    final ok = await BiometricService.authenticate(
-      reason: enable ? 'Confirm identity to enable biometric login' : 'Confirm identity to disable biometric login',
-    );
+    final ok = await BiometricService.authenticate(reason: 'Confirm identity to enable biometric login');
     if (!mounted) return;
-    if (ok) {
-      final p = await SharedPreferences.getInstance();
-      await p.setBool('biometric_enabled', enable);
-      setState(() => _biometricEnabled = enable);
-    }
+    if (ok) await prefs.setSecurity('biometricEnabled', true);
   }
 
-  Future<void> _togglePasscode(bool enable) async {
-    if (enable) {
-      final ok = await showPasscodeScreen(
-        context,
-        mode: PasscodeMode.setup,
-      );
+  Future<void> _togglePasscode(PreferencesProvider prefs) async {
+    if (prefs.passcodeEnabled) {
+      final ok = await showPasscodeScreen(context,
+          mode: PasscodeMode.verify,
+          title: 'Enter Current Passcode',
+          subtitle: 'Confirm to disable passcode');
       if (!mounted || ok != true) return;
-      setState(() => _passcodeEnabled = true);
+      await prefs.setSecurity('passcodeEnabled', false);
     } else {
-      final ok = await showPasscodeScreen(
-        context,
-        mode: PasscodeMode.verify,
-        title: 'Enter Current Passcode',
-        subtitle: 'Confirm to disable passcode',
-      );
+      final ok = await showPasscodeScreen(context, mode: PasscodeMode.setup);
       if (!mounted || ok != true) return;
-      final p = await SharedPreferences.getInstance();
-      await p.remove('app_passcode');
-      setState(() => _passcodeEnabled = false);
+      await prefs.setSecurity('passcodeEnabled', true);
     }
   }
 
   void _showEditProfile() {
-    final nameCtrl = TextEditingController(text: _name);
-    final phoneCtrl = TextEditingController(text: _phone);
-    final emailCtrl = TextEditingController(text: _email);
+    final firstCtrl  = TextEditingController(text: _firstName);
+    final middleCtrl = TextEditingController(text: _middleName);
+    final lastCtrl   = TextEditingController(text: _lastName);
+    final phoneCtrl  = TextEditingController(text: _phone);
+    final emailCtrl  = TextEditingController(text: _email);
+    String? sheetError;
 
     showAppSheet(
       context,
       title: 'Edit Profile',
-      child: Column(children: [
-        AppInputField(hint: 'Full Name', controller: nameCtrl, icon: Icons.person_outline),
-        const SizedBox(height: 12),
-        AppInputField(hint: 'Phone Number', controller: phoneCtrl, icon: Icons.phone_outlined),
-        const SizedBox(height: 12),
-        AppInputField(hint: 'Email Address', controller: emailCtrl, icon: Icons.email_outlined),
-        const SizedBox(height: 20),
-        PrimaryButton(
-          label: 'Save Changes',
-          onTap: () async {
-            final nameParts = nameCtrl.text.trim().split(RegExp(r'\s+'));
-            final firstName = nameParts.isNotEmpty ? nameParts.first : '';
-            final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-            try {
-              await ApiService.updateProfile({
-                'first_name': firstName,
-                'last_name': lastName,
-                'phone': phoneCtrl.text.trim(),
-              });
-              setState(() {
-                _name = nameCtrl.text.trim();
-                _phone = phoneCtrl.text.trim();
-                _email = emailCtrl.text.trim();
-              });
-            } catch (_) {}
-            if (mounted) Navigator.pop(context);
-          },
-        ),
-      ]),
+      child: StatefulBuilder(
+        builder: (ctx, setSheet) => Column(children: [
+          Row(children: [
+            Expanded(child: AppInputField(hint: 'First Name', controller: firstCtrl, icon: Icons.person_outline)),
+            const SizedBox(width: 12),
+            Expanded(child: AppInputField(hint: 'Last Name', controller: lastCtrl, icon: Icons.person_outline)),
+          ]),
+          const SizedBox(height: 12),
+          AppInputField(hint: 'Middle Name (optional)', controller: middleCtrl, icon: Icons.person_outline),
+          const SizedBox(height: 12),
+          AppInputField(hint: 'Phone Number', controller: phoneCtrl, icon: Icons.phone_outlined),
+          const SizedBox(height: 12),
+          AppInputField(hint: 'Email Address', controller: emailCtrl, icon: Icons.email_outlined),
+          if (sheetError != null) ...[
+            const SizedBox(height: 10),
+            Text(sheetError!, style: const TextStyle(color: AppColors.destructive, fontSize: 13)),
+          ],
+          const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'Save Changes',
+            onTap: () async {
+              try {
+                await context.read<ApiService>().updateProfile({
+                  'first_name':  firstCtrl.text.trim(),
+                  'middle_name': middleCtrl.text.trim(),
+                  'last_name':   lastCtrl.text.trim(),
+                  'phone':       phoneCtrl.text.trim(),
+                  if (emailCtrl.text.trim().isNotEmpty) 'email': emailCtrl.text.trim(),
+                });
+                setState(() {
+                  _firstName  = firstCtrl.text.trim();
+                  _middleName = middleCtrl.text.trim();
+                  _lastName   = lastCtrl.text.trim();
+                  _name  = '$_firstName $_lastName'.trim();
+                  _phone = phoneCtrl.text.trim();
+                  _email = emailCtrl.text.trim();
+                });
+                if (mounted) Navigator.pop(context);
+              } catch (e) {
+                setSheet(() => sheetError = e.toString().replaceFirst('Exception: ', ''));
+              }
+            },
+          ),
+        ]),
+      ),
     );
   }
 
@@ -192,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return;
             }
             try {
-              await ApiService.changePassword(currentCtrl.text, newCtrl.text);
+              await context.read<ApiService>().changePassword(currentCtrl.text, newCtrl.text);
               if (mounted) Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed')));
             } catch (e) {
@@ -207,7 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showActiveSessions() async {
     List<Map<String, dynamic>> sessions = [];
     try {
-      final data = await ApiService.getSessions();
+      final data = await context.read<ApiService>().getSessions();
       sessions = (data['sessions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     } catch (_) {}
 
@@ -243,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           label: 'Sign Out All Other Sessions',
           onTap: () async {
             try {
-              await ApiService.revokeAllSessions();
+              await context.read<ApiService>().revokeAllSessions();
             } catch (_) {}
             if (mounted) Navigator.pop(context);
           },
@@ -285,7 +310,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         confirmColor: AppColors.destructive,
         onConfirm: () async {
           try {
-            await ApiService.deleteAccount();
+            await context.read<ApiService>().deleteAccount();
             if (mounted) {
               Navigator.pop(context);
               context.read<AuthProvider>().logout();
@@ -317,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(children: [
               GestureDetector(
-                onTap: () => widget.onNavigate('home'),
+                onTap: () => context.go(Routes.home),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -337,15 +362,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             GlassCard(
               padding: const EdgeInsets.all(24),
               child: Row(children: [
-                Container(
-                  width: 80, height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [c.accent, AppColors.primaryGreen]),
-                  ),
-                  child: Center(
-                    child: Text(_initials,
-                        style: const TextStyle(color: AppColors.background, fontSize: 24, fontWeight: FontWeight.w700)),
+                GestureDetector(
+                  onTap: _pickAndUploadAvatar,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 80, height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(colors: [c.accent, AppColors.primaryGreen]),
+                        ),
+                        child: _avatarUploading
+                            ? Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
+                            : _avatarUrl.isNotEmpty
+                                ? ClipOval(child: Image.network(_avatarUrl, width: 80, height: 80, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Center(child: Text(_initials,
+                                        style: const TextStyle(color: AppColors.background, fontSize: 24, fontWeight: FontWeight.w700)))))
+                                : Center(child: Text(_initials,
+                                    style: const TextStyle(color: AppColors.background, fontSize: 24, fontWeight: FontWeight.w700))),
+                      ),
+                      Positioned(
+                        bottom: 0, right: 0,
+                        child: Container(
+                          width: 24, height: 24,
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent, border: Border.all(color: c.background, width: 2)),
+                          child: const Icon(Icons.camera_alt, size: 12, color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -370,7 +414,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _divider(),
                 _menuItem(Icons.lock_outline, 'Change Password', onTap: _showChangePassword),
                 _divider(),
-                _menuItem(Icons.link, 'Linked Accounts', onTap: () => widget.onNavigate('linked-accounts')),
+                _menuItem(Icons.link, 'Linked Accounts', onTap: () => context.go(Routes.linkedAccounts)),
               ]),
             ),
 
@@ -381,31 +425,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(children: [
                 _toggleItem(Icons.notifications_outlined, 'SMS Detection', _smsEnabled, (v) {
                   setState(() => _smsEnabled = v);
-                  ApiService.savePreferences({'sms_detection': _smsEnabled, 'analytics': _analyticsEnabled, 'partner_offers': false});
+                  context.read<ApiService>().savePreferences({'sms_detection': _smsEnabled, 'analytics': _analyticsEnabled, 'partner_offers': false});
                 }),
                 _divider(),
                 _toggleItem(Icons.bar_chart_rounded, 'Analytics Tracking', _analyticsEnabled, (v) {
                   setState(() => _analyticsEnabled = v);
-                  ApiService.savePreferences({'sms_detection': _smsEnabled, 'analytics': _analyticsEnabled, 'partner_offers': false});
+                  context.read<ApiService>().savePreferences({'sms_detection': _smsEnabled, 'analytics': _analyticsEnabled, 'partner_offers': false});
                 }),
                 _divider(),
-                _menuItem(Icons.tune, 'All Preferences', onTap: () => widget.onNavigate('preferences')),
+                _menuItem(Icons.tune, 'All Preferences', onTap: () => context.go(Routes.preferences)),
               ]),
             ),
 
             const SizedBox(height: 24),
 
             const SectionLabel('Security'),
-            GlassCard(
-              child: Column(children: [
-                _toggleItem(Icons.fingerprint, 'Biometric Login', _biometricEnabled, (v) => _toggleBiometric(v)),
-                _divider(),
-                _toggleItem(Icons.pin_outlined, 'Passcode', _passcodeEnabled, (v) => _togglePasscode(v)),
-                _divider(),
-                _menuItem(Icons.shield, 'Active Sessions', onTap: _showActiveSessions),
-                _divider(),
-                _menuItem(Icons.settings, 'App Permissions', badge: 'Manage', onTap: () => widget.onNavigate('permissions')),
-              ]),
+            Consumer<PreferencesProvider>(
+              builder: (_, prefs, __) => GlassCard(
+                child: Column(children: [
+                  _toggleItem(Icons.fingerprint, 'Biometric Login', prefs.biometricEnabled, (_) => _toggleBiometric(prefs)),
+                  _divider(),
+                  _toggleItem(Icons.pin_outlined, 'Passcode', prefs.passcodeEnabled, (_) => _togglePasscode(prefs)),
+                  _divider(),
+                  _menuItem(Icons.shield, 'Active Sessions', onTap: _showActiveSessions),
+                  _divider(),
+                  _menuItem(Icons.settings, 'App Permissions', badge: 'Manage', onTap: () => context.go(Routes.permissions)),
+                ]),
+              ),
             ),
 
             const SizedBox(height: 24),

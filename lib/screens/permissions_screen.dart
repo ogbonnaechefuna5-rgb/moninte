@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
+import '../router.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
@@ -8,8 +10,7 @@ import '../models/permission.dart';
 import '../services/biometric_service.dart';
 
 class PermissionsScreen extends StatefulWidget {
-  final VoidCallback onBack;
-  const PermissionsScreen({super.key, required this.onBack});
+  const PermissionsScreen({super.key});
 
   @override
   State<PermissionsScreen> createState() => _PermissionsScreenState();
@@ -100,7 +101,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             ScreenHeader(
               title: 'Permissions',
               subtitle: '$granted of ${_perms.length} granted',
-              onBack: widget.onBack,
+              onBack: () => context.go(Routes.profile),
             ),
 
             SizedBox(height: 20),

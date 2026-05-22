@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/screen_header.dart';
 import '../services/api_service.dart';
 import '../models/bank.dart';
+import '../router.dart';
 
 class LinkedAccountsScreen extends StatefulWidget {
-  final VoidCallback onBack;
-  const LinkedAccountsScreen({super.key, required this.onBack});
+  const LinkedAccountsScreen({super.key});
 
   @override
   State<LinkedAccountsScreen> createState() => _LinkedAccountsScreenState();
@@ -26,7 +28,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
 
   Future<void> _load() async {
     try {
-      final data = await ApiService.getLinkedAccounts();
+      final data = await context.read<ApiService>().getLinkedAccounts();
       final list = (data['accounts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       if (mounted) setState(() { _accounts = list; _loading = false; });
     } catch (_) {
@@ -37,7 +39,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
   Future<void> _syncAccount(String id) async {
     setState(() => _syncingId = id);
     try {
-      await ApiService.syncAccount(id);
+      await context.read<ApiService>().syncAccount(id);
       await _load();
     } catch (_) {}
     if (mounted) setState(() => _syncingId = null);
@@ -45,7 +47,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
 
   Future<void> _removeAccount(String id) async {
     try {
-      await ApiService.removeAccount(id);
+      await context.read<ApiService>().removeAccount(id);
       setState(() => _accounts.removeWhere((a) => a['id'] == id));
     } catch (_) {}
   }
@@ -124,7 +126,7 @@ class _LinkedAccountsScreenState extends State<LinkedAccountsScreen> {
               ScreenHeader(
                 title: 'Linked Accounts',
                 subtitle: '${_accounts.length} account${_accounts.length != 1 ? 's' : ''} connected',
-                onBack: widget.onBack,
+                onBack: () => context.go(Routes.profile),
               ),
               const SizedBox(height: 20),
 

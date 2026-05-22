@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_toggle.dart';
@@ -74,6 +76,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else {
       widget.onComplete();
     }
+  }
+
+  void _uploadPhotoInBackground() {
+    if (_photoFile == null) return;
+    context.read<ApiService>().uploadAvatar(_photoFile!).then((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo saved')),
+      );
+    }).catchError((e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Photo upload failed: ${e.toString().replaceFirst('Exception: ', '')}')),
+      );
+    });
   }
 
   @override
@@ -178,7 +195,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _next,
+                    onPressed: () {
+                      if (_currentStep == 1) _uploadPhotoInBackground();
+                      _next();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: c.accent,
                       foregroundColor: c.background,

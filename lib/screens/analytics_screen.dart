@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../services/api_service.dart';
+import '../widgets/screen_header.dart';
+import '../providers/analytics_provider.dart';
 import '../utils/formatters.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -14,29 +16,19 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   String _period = 'week';
-  Map<String, dynamic>? _data;
-  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      final data = await ApiService.getAnalytics(_period);
-      if (mounted) setState(() { _data = data; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<AnalyticsProvider>().load(_period),
+    );
   }
 
   void _setPeriod(String p) {
     if (p == _period) return;
     _period = p;
-    _load();
+    context.read<AnalyticsProvider>().load(p);
   }
 
   static const _catColors = [Color(0xFFFF8C42), Color(0xFF4D9FFF), Color(0xFFA855F7), Color(0xFFFFB830), Color(0xFFFF69B4)];
@@ -44,6 +36,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final analytics = context.watch<AnalyticsProvider>();
+    final _data = analytics.data;
+    final _loading = analytics.loading && _data == null;
 
     final totalSpend = (_data?['totalSpend'] as num?)?.toDouble() ?? 0;
     final totalSpendChange = (_data?['totalSpendChange'] as num?)?.toInt() ?? 0;
@@ -55,16 +50,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       backgroundColor: c.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: () => context.read<AnalyticsProvider>().load(_period, force: true),
           color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-                child: Text('Analytics', style: Theme.of(context).textTheme.displayMedium),
-              ),
-              Text('Spending insights', style: TextStyle(color: c.textSecondary, fontSize: 14)),
+              const ScreenHeader(title: 'Analytics', subtitle: 'Spending insights'),
               SizedBox(height: 20),
 
               // Period pills

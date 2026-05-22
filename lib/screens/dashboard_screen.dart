@@ -1,41 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
+import '../router.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/category_badge.dart';
+import '../providers/category_provider.dart';
+import '../providers/dashboard_provider.dart';
 import '../widgets/notification_pane.dart';
-import '../services/api_service.dart';
 import '../utils/formatters.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final VoidCallback? onProfileTap;
-  const DashboardScreen({super.key, this.onProfileTap});
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-
   @override
   void initState() {
     super.initState();
-    _load();
+    // Load once; subsequent visits use the cache unless invalidated.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<DashboardProvider>().load(),
+    );
   }
 
-  Future<void> _load() async {
-    try {
-      final data = await ApiService.getDashboard();
-      if (mounted) setState(() { _data = data; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
+  Future<void> _refresh() => context.read<DashboardProvider>().load(force: true);
 
   @override
   Widget build(BuildContext context) {
@@ -43,16 +38,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final hideBalances = context.watch<PreferencesProvider>().hideBalances;
     final user = context.watch<AuthProvider>().user;
     final firstName = user?['first_name'] as String? ?? '';
-    final lastName = user?['last_name'] as String? ?? '';
-    final initials = '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'.toUpperCase();
     final greeting = _greeting();
+    final dash = context.watch<DashboardProvider>();
 
-    if (_loading) {
+    if (dash.loading && dash.data == null) {
       return Scaffold(
         backgroundColor: c.background,
         body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
+
+    final _data = dash.data;
 
     final netWorth = (_data?['netWorth'] as num?)?.toDouble() ?? 0;
     final banks = (_data?['banks'] as List?)?.cast<String>() ?? [];
@@ -74,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: c.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: _refresh,
           color: c.accent,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
@@ -121,25 +117,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Container(width: 8, height: 8, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.destructive)),
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Avatar
-                  GestureDetector(
-                    onTap: widget.onProfileTap,
-                    child: Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: c.accent.withValues(alpha: 0.15),
-                        border: Border.all(color: c.accent.withValues(alpha: 0.4)),
-                      ),
-                      child: Center(
-                        child: Text(
-                          initials.isNotEmpty ? initials : '?',
-                          style: TextStyle(color: c.accent, fontSize: 14, fontWeight: FontWeight.w700),
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -243,10 +220,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Recent Transactions', style: Theme.of(context).textTheme.titleMedium),
-                    Row(children: [
-                      Text('See all', style: TextStyle(color: c.accent, fontSize: 14)),
-                      Icon(Icons.chevron_right, color: c.accent, size: 18),
-                    ]),
+                    GestureDetector(
+                      onTap: () => context.go(Routes.transactions),
+                      child: Row(children: [
+                        Text('See all', style: TextStyle(color: c.accent, fontSize: 14)),
+                        Icon(Icons.chevron_right, color: c.accent, size: 18),
+                      ]),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -406,15 +386,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  String _categoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'food': case 'food & dining': return '🍔';
-      case 'transport': case 'transportation': return '🚗';
-      case 'shopping': return '🛒';
-      case 'bills': case 'utilities': return '⚡';
-      case 'airtime': return '📱';
-      case 'entertainment': return '🎬';
-      default: return '📦';
-    }
-  }
+  String _categoryIcon(String category) =>
+      context.read<CategoryProvider>().forName(category).icon;
 }
