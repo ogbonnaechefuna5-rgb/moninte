@@ -8,6 +8,8 @@ import '../widgets/section_label.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/passcode_screen.dart';
 import '../providers/theme_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/analytics_provider.dart';
 import '../providers/preferences_provider.dart';
 import '../services/biometric_service.dart';
 import '../router.dart';
@@ -57,13 +59,28 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     if (set == true) await prefs.setSecurity('passcodeEnabled', true);
   }
 
+  Future<void> _clearCache() async {
+    context.read<DashboardProvider>().invalidate();
+    context.read<AnalyticsProvider>().invalidate();
+    setState(() => _showClearConfirm = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cache cleared')),
+    );
+  }
+
+  void _exportData() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Export coming soon')),
+    );
+  }
+
   static const _notifItems = [
-    _Item('transactions', Icons.bolt, Color(0xFFA8FF3E), 'Transaction Alerts', 'Instant alerts for every debit and credit'),
+    _Item('transactionAlerts', Icons.bolt, Color(0xFFA8FF3E), 'Transaction Alerts', 'Instant alerts for every debit and credit'),
     _Item('budgetWarnings', Icons.trending_up, Color(0xFFFFB830), 'Budget Warnings', "When you're approaching or over your limits"),
     _Item('aiInsights', Icons.bar_chart, Color(0xFF4DFF91), 'AI Insights', 'Weekly spending patterns and smart tips'),
-    _Item('weeklyReport', Icons.calendar_today, Color(0xFF8A9E90), 'Weekly Digest', "Sunday summary of the week's finances"),
-    _Item('savingsReminders', Icons.notifications, Color(0xFFA8FF3E), 'Savings Reminders', "Nudges when you're behind on savings goals"),
-    _Item('promotions', Icons.notifications_off, Color(0xFF8A9E90), 'Tips & Promotions', 'Financial tips and feature announcements'),
+    _Item('weeklyReport', Icons.calendar_today, Color(0xFF8A9E90), 'Weekly Digest', "Sunday summary of the week's finances", comingSoon: true),
+    _Item('savingsReminders', Icons.notifications, Color(0xFFA8FF3E), 'Savings Reminders', "Nudges when you're behind on savings goals", comingSoon: true),
+    _Item('promotions', Icons.notifications_off, Color(0xFF8A9E90), 'Tips & Promotions', 'Financial tips and feature announcements', comingSoon: true),
   ];
 
   static const _privacyItems = [
@@ -143,7 +160,11 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     children: _notifItems.asMap().entries.map((e) {
                       final i = e.key; final item = e.value;
                       return Column(children: [
-                        _toggleRow(context, item, prefs.valueOf(item.key), () => prefs.toggle(item.key)),
+                        _toggleRow(context, item, prefs.valueOf(item.key), item.comingSoon ? () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Coming soon')),
+                          );
+                        } : () => prefs.toggle(item.key)),
                         if (i < _notifItems.length - 1) Divider(height: 1, color: c.borderDefault),
                       ]);
                     }).toList(),
@@ -172,7 +193,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 const SectionLabel('Data'),
                 GlassCard(
                   child: Column(children: [
-                    _actionRow(context, Icons.download, AppColors.success, 'Export My Data', 'Download all transactions as CSV', () {}),
+                    _actionRow(context, Icons.download, AppColors.success, 'Export My Data', 'Download all transactions as CSV', _exportData),
                     Divider(height: 1, color: c.borderDefault),
                     _actionRow(context, Icons.delete_outline, AppColors.destructive, 'Clear Cache', "Free up space (won't delete your data)", () => setState(() => _showClearConfirm = true)),
                   ]),
@@ -275,7 +296,17 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(item.label, style: TextStyle(color: c.textPrimary, fontSize: 14)),
+          Row(children: [
+            Text(item.label, style: TextStyle(color: c.textPrimary, fontSize: 14)),
+            if (item.comingSoon) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: c.textSecondary.withValues(alpha: 0.1)),
+                child: Text('Soon', style: TextStyle(color: c.textSecondary, fontSize: 10)),
+              ),
+            ],
+          ]),
           const SizedBox(height: 2),
           Text(item.desc, style: TextStyle(color: c.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
         ])),
@@ -359,7 +390,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     )),
                     const SizedBox(width: 12),
                     Expanded(child: ElevatedButton(
-                      onPressed: () => setState(() => _showClearConfirm = false),
+                      onPressed: _clearCache,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.destructive, foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -382,5 +413,6 @@ class _Item {
   final String key, label, desc;
   final IconData icon;
   final Color iconColor;
-  const _Item(this.key, this.icon, this.iconColor, this.label, this.desc);
+  final bool comingSoon;
+  const _Item(this.key, this.icon, this.iconColor, this.label, this.desc, {this.comingSoon = false});
 }

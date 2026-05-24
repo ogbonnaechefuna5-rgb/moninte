@@ -8,6 +8,8 @@ import '../widgets/app_button.dart';
 import 'package:provider/provider.dart';
 import '../services/sms_service.dart';
 import '../services/api_service.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/analytics_provider.dart';
 
 class IngestScreen extends StatefulWidget {
   final void Function(bool)? onPickerActive;
@@ -126,7 +128,14 @@ class _SmsTabState extends State<_SmsTab> {
     });
   }
 
-  Future<void> _send() async {
+  void _invalidateProviders() {
+    context.read<DashboardProvider>().invalidate();
+    context.read<AnalyticsProvider>().invalidate();
+    context.read<DashboardProvider>().load();
+    context.read<AnalyticsProvider>().load('week');
+  }
+
+  Future<void> _send() async { 
     if (_selected.isEmpty) return;
     setState(() { _sending = true; _result = null; });
     final bodies = _selected.map((i) => _messages[i].body).toList();
@@ -135,6 +144,7 @@ class _SmsTabState extends State<_SmsTab> {
       if (!mounted) return;
       final count = res['processed'] ?? bodies.length;
       setState(() { _result = 'Synced $count transaction${count != 1 ? 's' : ''}'; _sending = false; });
+      if (count > 0) _invalidateProviders();
     } catch (e) {
       if (!mounted) return;
       setState(() { _result = e.toString().replaceFirst('Exception: ', ''); _sending = false; });
@@ -315,6 +325,12 @@ class _UploadTabState extends State<_UploadTab> with AutomaticKeepAliveClientMix
       if (!mounted) return;
       final count = res['processed'] ?? 0;
       setState(() { _result = 'Imported $count transaction${count != 1 ? 's' : ''}'; _uploading = false; _file = null; });
+      if (count > 0) {
+        context.read<DashboardProvider>().invalidate();
+        context.read<AnalyticsProvider>().invalidate();
+        context.read<DashboardProvider>().load();
+        context.read<AnalyticsProvider>().load('week');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() { _result = e.toString().replaceFirst('Exception: ', ''); _uploading = false; });

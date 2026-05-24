@@ -52,7 +52,7 @@ class PreferencesProvider extends ChangeNotifier {
       savingsReminders  = p['savings_reminders']  as bool? ?? savingsReminders;
       promotions        = p['promotions']         as bool? ?? promotions;
       hideBalances      = p['hide_balances']      as bool? ?? hideBalances;
-      shareAnalytics    = p['share_analytics']    as bool? ?? shareAnalytics;
+      shareAnalytics    = p['analytics']          as bool? ?? shareAnalytics;
       crashReports      = p['crash_reports']      as bool? ?? crashReports;
       await _saveLocal();
       notifyListeners();
@@ -133,7 +133,7 @@ class PreferencesProvider extends ChangeNotifier {
         'savings_reminders':   savingsReminders,
         'promotions':          promotions,
         'hide_balances':       hideBalances,
-        'share_analytics':     shareAnalytics,
+        'analytics':           shareAnalytics,
         'crash_reports':       crashReports,
       });
     } catch (_) {

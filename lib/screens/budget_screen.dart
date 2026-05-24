@@ -58,27 +58,27 @@ class _BudgetScreenState extends State<BudgetScreen> {
             RefreshIndicator(
               onRefresh: () => context.read<BudgetProvider>().load(force: true),
               color: c.accent,
-              child: ListView(
+              child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-                children: [
-                  const ScreenHeader(title: 'Budget', subtitle: 'Track your spending limits'),
-                  const SizedBox(height: 20),
-
-                  // Month nav
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    GestureDetector(onTap: () => _changeMonth(-1), child: _navBtn(Icons.chevron_left)),
-                    const SizedBox(width: 16),
-                    Text('${_months[_selectedMonth.month - 1]} ${_selectedMonth.year}',
-                        style: TextStyle(color: c.textPrimary, fontSize: 16)),
-                    const SizedBox(width: 16),
-                    GestureDetector(onTap: () => _changeMonth(1), child: _navBtn(Icons.chevron_right)),
-                  ]),
-
-                  const SizedBox(height: 20),
-
-                  // Budget list
-                  if (_budgets.isEmpty)
-                    GlassCard(
+                itemCount: 1 + (_budgets.isEmpty ? 1 : _budgets.length),
+                itemBuilder: (_, i) {
+                  if (i == 0) {
+                    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const ScreenHeader(title: 'Budget', subtitle: 'Track your spending limits'),
+                      const SizedBox(height: 20),
+                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        GestureDetector(onTap: () => _changeMonth(-1), child: _navBtn(Icons.chevron_left)),
+                        const SizedBox(width: 16),
+                        Text('${_months[_selectedMonth.month - 1]} ${_selectedMonth.year}',
+                            style: TextStyle(color: c.textPrimary, fontSize: 16)),
+                        const SizedBox(width: 16),
+                        GestureDetector(onTap: () => _changeMonth(1), child: _navBtn(Icons.chevron_right)),
+                      ]),
+                      const SizedBox(height: 20),
+                    ]);
+                  }
+                  if (_budgets.isEmpty) {
+                    return GlassCard(
                       padding: const EdgeInsets.all(32),
                       child: Column(children: [
                         Icon(Icons.account_balance_wallet_outlined, size: 48, color: c.textSecondary),
@@ -87,38 +87,38 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         const SizedBox(height: 4),
                         Text('Tap + to create your first budget', style: TextStyle(color: c.textSecondary, fontSize: 14)),
                       ]),
-                    )
-                  else
-                    ..._budgets.asMap().entries.map((e) {
-                      final b = e.value;
-                      final category = b['category'] ?? '';
-                      final amount = (b['amount'] as num?)?.toDouble() ?? 0;
-                      final period = b['period'] ?? 'monthly';
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: GlassCard(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Container(
-                              width: 48, height: 48,
-                              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: c.surfaceLight),
-                              child: Center(child: Text(_categoryEmoji(category), style: const TextStyle(fontSize: 24))),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                Text(category, style: TextStyle(color: c.textPrimary)),
-                                StatusBadge(text: period, color: c.accent),
-                              ]),
-                              const SizedBox(height: 8),
-                              Text('₦${fmtNumber(amount.round())} limit', style: AppTheme.monoSized(14, color: c.textSecondary)),
-                            ])),
-                          ]),
-                        ),
-                      );
-                    }),
-                ],
+                    );
+                  }
+                  final b = _budgets[i - 1];
+                  final category = b['category'] ?? '';
+                  final amount = (b['amount'] as num?)?.toDouble() ?? 0;
+                  final period = b['period'] ?? 'monthly';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: RepaintBoundary(
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(16),
+                        blur: false,
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Container(
+                            width: 48, height: 48,
+                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: c.surfaceLight),
+                            child: Center(child: Text(_categoryEmoji(category), style: const TextStyle(fontSize: 24))),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                              Text(category, style: TextStyle(color: c.textPrimary)),
+                              StatusBadge(text: period, color: c.accent),
+                            ]),
+                            const SizedBox(height: 8),
+                            Text('₦${fmtNumber(amount.round())} limit', style: AppTheme.monoSized(14, color: c.textSecondary)),
+                          ])),
+                        ]),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             // FAB

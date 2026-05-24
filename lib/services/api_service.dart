@@ -16,7 +16,7 @@ class ApiService {
   }) : baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE',
-              defaultValue: 'http://localhost:8080/api/v1',
+              defaultValue: 'http://172.20.10.2:8080/api/v1',
             );
 
   /// Resolves a relative path like /uploads/avatars/x.jpg to a full URL.

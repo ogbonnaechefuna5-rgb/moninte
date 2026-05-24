@@ -29,6 +29,10 @@ class AuthProvider extends ChangeNotifier {
     _api.onUnauthorized = _handleUnauthorized;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    final firstName = prefs.getString('user_first_name');
+    if (firstName != null) {
+      _user = {'first_name': firstName, 'last_name': prefs.getString('user_last_name') ?? ''};
+    }
     _loading = false;
     notifyListeners();
   }
@@ -186,8 +190,6 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('refresh_token');
-    await prefs.remove('user_first_name');
-    await prefs.remove('user_last_name');
     notifyListeners();
   }
 

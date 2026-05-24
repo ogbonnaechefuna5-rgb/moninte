@@ -121,35 +121,38 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                               final type = tx['type'] ?? 'debit';
                               final date = tx['transaction_date'] as String? ?? '';
                               final isCredit = type == 'credit';
-                              return GlassCard(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(children: [
-                                  Container(
-                                    width: 44, height: 44,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      color: c.surfaceLight,
+                              return RepaintBoundary(
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(16),
+                                  blur: false,
+                                  child: Row(children: [
+                                    Container(
+                                      width: 44, height: 44,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        color: c.surfaceLight,
+                                      ),
+                                      child: Center(child: Text(_categoryIcon(category), style: const TextStyle(fontSize: 22))),
                                     ),
-                                    child: Center(child: Text(_categoryIcon(category), style: const TextStyle(fontSize: 22))),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Text(merchant, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 4),
-                                    Row(children: [
-                                      CategoryBadge(category: category),
-                                      if (date.isNotEmpty) ...[ 
-                                        const SizedBox(width: 8),
-                                        Text(_formatDate(date), style: TextStyle(color: c.textSecondary, fontSize: 11)),
-                                      ],
-                                    ]),
-                                  ])),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${isCredit ? '+' : '-'}₦${fmtNumber(amount.abs().round())}',
-                                    style: AppTheme.monoSized(15, color: isCredit ? AppColors.success : AppColors.destructive),
-                                  ),
-                                ]),
+                                    const SizedBox(width: 12),
+                                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text(merchant, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 4),
+                                      Row(children: [
+                                        CategoryBadge(category: category),
+                                        if (date.isNotEmpty) ...[ 
+                                          const SizedBox(width: 8),
+                                          Text(_formatDate(date), style: TextStyle(color: c.textSecondary, fontSize: 11)),
+                                        ],
+                                      ]),
+                                    ])),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${isCredit ? '+' : '-'}₦${fmtNumber(amount.abs().round())}',
+                                      style: AppTheme.monoSized(15, color: isCredit ? AppColors.success : AppColors.destructive),
+                                    ),
+                                  ]),
+                                ),
                               );
                             },
                           ),

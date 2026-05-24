@@ -7,10 +7,11 @@ class GlassCard extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final bool hover;
   final bool animate;
+  final bool blur;
   final BoxBorder? border;
   final Gradient? gradient;
   final VoidCallback? onTap;
-  final String? className; // unused, for migration convenience
+  final String? className;
 
   const GlassCard({
     super.key,
@@ -18,6 +19,7 @@ class GlassCard extends StatefulWidget {
     this.padding,
     this.hover = false,
     this.animate = false,
+    this.blur = false,
     this.border,
     this.gradient,
     this.onTap,
@@ -34,9 +36,12 @@ class _GlassCardState extends State<GlassCard>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Only initialised when widget.animate == true
+
   @override
   void initState() {
     super.initState();
+    if (!widget.animate) return;
     _controller = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -46,58 +51,53 @@ class _GlassCardState extends State<GlassCard>
       begin: const Offset(0, 0.05),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
-    if (widget.animate) {
-      _controller.forward();
-    } else {
-      _controller.value = 1.0;
-    }
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (widget.animate) _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-
-    Widget card = ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: widget.padding,
-          decoration: BoxDecoration(
-            gradient: widget.gradient ??
-                LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    c.surfaceLight.withValues(alpha: 0.4),
-                    c.surfaceDark.withValues(alpha: 0.6),
-                  ],
-                ),
-            borderRadius: BorderRadius.circular(16),
-            border: widget.border ?? Border.all(color: c.borderDefault),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: c.isDark ? 0.2 : 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
+    final decoration = BoxDecoration(
+      gradient: widget.gradient ??
+          LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              c.surfaceLight.withValues(alpha: 0.4),
+              c.surfaceDark.withValues(alpha: 0.6),
             ],
           ),
-          child: widget.child,
+      borderRadius: BorderRadius.circular(16),
+      border: widget.border ?? Border.all(color: c.borderDefault),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: c.isDark ? 0.2 : 0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
         ),
-      ),
+      ],
     );
+    Widget card = widget.blur
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(padding: widget.padding, decoration: decoration, child: widget.child),
+            ),
+          )
+        : Container(padding: widget.padding, decoration: decoration, child: widget.child);
 
     if (widget.onTap != null) {
       card = GestureDetector(onTap: widget.onTap, child: card);
     }
+
+    if (!widget.animate) return card;
 
     return FadeTransition(
       opacity: _fadeAnimation,

@@ -128,6 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               GlassCard(
                 padding: const EdgeInsets.all(24),
                 animate: true,
+                blur: true,
                 child: Stack(
                   children: [
                     Positioned(top: -20, right: -20, child: Container(
@@ -167,11 +168,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // Stats row
               Row(
                 children: [
-                  Expanded(child: _statCard(context, 'This Month', fmtCurrencyShort(thisMonth), Icons.trending_up, monthChange >= 0 ? AppColors.destructive : AppColors.success, '${monthChange >= 0 ? "+" : ""}$monthChange%')),
+                  Expanded(child: _statCard(context, 'This Month', fmtCurrencyShort(thisMonth), Icons.trending_up, monthChange >= 0 ? AppColors.destructive : AppColors.success, '${monthChange >= 0 ? "+" : ""}$monthChange%', blur: false)),
                   const SizedBox(width: 8),
-                  Expanded(child: _statCard(context, 'Income', fmtCurrencyShort(income), Icons.trending_up, incomeChange >= 0 ? AppColors.success : AppColors.destructive, '${incomeChange >= 0 ? "+" : ""}$incomeChange%')),
+                  Expanded(child: _statCard(context, 'Income', fmtCurrencyShort(income), Icons.trending_up, incomeChange >= 0 ? AppColors.success : AppColors.destructive, '${incomeChange >= 0 ? "+" : ""}$incomeChange%', blur: false)),
                   const SizedBox(width: 8),
-                  Expanded(child: _statCard(context, 'Savings', '$savingsPct%', savingsChange >= 0 ? Icons.trending_up : Icons.trending_down, savingsChange >= 0 ? AppColors.success : c.textSecondary, '${savingsChange >= 0 ? "+" : ""}$savingsChange%')),
+                  Expanded(child: _statCard(context, 'Savings', '$savingsPct%', savingsChange >= 0 ? Icons.trending_up : Icons.trending_down, savingsChange >= 0 ? AppColors.success : c.textSecondary, '${savingsChange >= 0 ? "+" : ""}$savingsChange%', blur: false)),
                 ],
               ),
 
@@ -238,6 +239,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: GlassCard(
                       padding: const EdgeInsets.all(16),
+                      blur: false,
                       child: Row(
                         children: [
                           Container(
@@ -284,6 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: GlassCard(
                       padding: const EdgeInsets.all(16),
+                      blur: false,
                       child: Column(
                         children: [
                           Row(
@@ -365,10 +368,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _statCard(BuildContext context, String label, String value, IconData icon, Color color, String change) {
+  Widget _statCard(BuildContext context, String label, String value, IconData icon, Color color, String change, {bool blur = false}) {
     final c = AppColors.of(context);
     return GlassCard(
       padding: const EdgeInsets.all(16),
+      blur: blur,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
