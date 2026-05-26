@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
+/// Manages display/notification preferences and remote sync.
+/// Security settings (biometric, passcode) live in [SecurityProvider].
 class PreferencesProvider extends ChangeNotifier {
   final ApiService _api;
 
@@ -14,14 +16,10 @@ class PreferencesProvider extends ChangeNotifier {
   bool hideBalances      = false;
   bool shareAnalytics    = true;
   bool crashReports      = true;
-  bool biometricEnabled  = false;
-  bool passcodeEnabled   = false;
 
   PreferencesProvider(this._api) {
     _loadLocal().then((_) => _fetchRemote());
   }
-
-  // ── Load from SharedPreferences (instant, used while remote loads) ──
 
   Future<void> _loadLocal() async {
     final p = await SharedPreferences.getInstance();
@@ -34,12 +32,8 @@ class PreferencesProvider extends ChangeNotifier {
     hideBalances      = p.getBool('pref_hideBalances')      ?? false;
     shareAnalytics    = p.getBool('pref_shareAnalytics')    ?? true;
     crashReports      = p.getBool('pref_crashReports')      ?? true;
-    biometricEnabled  = p.getBool('pref_biometricEnabled')  ?? false;
-    passcodeEnabled   = p.getBool('pref_passcodeEnabled')   ?? false;
     notifyListeners();
   }
-
-  // ── Fetch from backend and overwrite local cache ──
 
   Future<void> _fetchRemote() async {
     try {
@@ -56,12 +50,8 @@ class PreferencesProvider extends ChangeNotifier {
       crashReports      = p['crash_reports']      as bool? ?? crashReports;
       await _saveLocal();
       notifyListeners();
-    } catch (_) {
-      // Offline — local values remain
-    }
+    } catch (_) {}
   }
-
-  // ── Toggle a preference, persist locally and remotely ──
 
   Future<void> toggle(String key) async {
     switch (key) {
@@ -80,17 +70,6 @@ class PreferencesProvider extends ChangeNotifier {
     _saveRemote();
   }
 
-  Future<void> setSecurity(String key, bool value) async {
-    if (key == 'biometricEnabled') biometricEnabled = value;
-    if (key == 'passcodeEnabled')  passcodeEnabled  = value;
-    notifyListeners();
-    final p = await SharedPreferences.getInstance();
-    await p.setBool('pref_$key', value);
-    if (!value && key == 'passcodeEnabled') {
-      await p.remove('app_passcode');
-    }
-  }
-
   bool valueOf(String key) {
     switch (key) {
       case 'transactionAlerts': return transactionAlerts;
@@ -102,8 +81,6 @@ class PreferencesProvider extends ChangeNotifier {
       case 'hideBalances':      return hideBalances;
       case 'shareAnalytics':    return shareAnalytics;
       case 'crashReports':      return crashReports;
-      case 'biometricEnabled':  return biometricEnabled;
-      case 'passcodeEnabled':   return passcodeEnabled;
       default:                  return false;
     }
   }
@@ -119,25 +96,21 @@ class PreferencesProvider extends ChangeNotifier {
     await p.setBool('pref_hideBalances',      hideBalances);
     await p.setBool('pref_shareAnalytics',    shareAnalytics);
     await p.setBool('pref_crashReports',      crashReports);
-    await p.setBool('pref_biometricEnabled',  biometricEnabled);
-    await p.setBool('pref_passcodeEnabled',   passcodeEnabled);
   }
 
   Future<void> _saveRemote() async {
     try {
       await _api.savePreferences({
-        'transaction_alerts':  transactionAlerts,
-        'budget_warnings':     budgetWarnings,
-        'ai_insights':         aiInsights,
-        'weekly_report':       weeklyReport,
-        'savings_reminders':   savingsReminders,
-        'promotions':          promotions,
-        'hide_balances':       hideBalances,
-        'analytics':           shareAnalytics,
-        'crash_reports':       crashReports,
+        'transaction_alerts': transactionAlerts,
+        'budget_warnings':    budgetWarnings,
+        'ai_insights':        aiInsights,
+        'weekly_report':      weeklyReport,
+        'savings_reminders':  savingsReminders,
+        'promotions':         promotions,
+        'hide_balances':      hideBalances,
+        'analytics':          shareAnalytics,
+        'crash_reports':      crashReports,
       });
-    } catch (_) {
-      // Offline — local already saved, will sync next time
-    }
+    } catch (_) {}
   }
 }

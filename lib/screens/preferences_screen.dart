@@ -11,6 +11,7 @@ import '../providers/theme_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/analytics_provider.dart';
 import '../providers/preferences_provider.dart';
+import '../providers/security_provider.dart';
 import '../services/biometric_service.dart';
 import '../router.dart';
 
@@ -27,9 +28,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
 
   bool _showClearConfirm = false;
 
-  Future<void> _toggleBiometric(PreferencesProvider prefs) async {
-    if (prefs.biometricEnabled) {
-      await prefs.setSecurity('biometricEnabled', false);
+  Future<void> _toggleBiometric(SecurityProvider security) async {
+    if (security.biometricEnabled) {
+      await security.setSecurity('biometricEnabled', false);
       return;
     }
     final available = await BiometricService.isAvailable();
@@ -42,21 +43,21 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     }
     final ok = await BiometricService.authenticate(reason: 'Set up biometric login');
     if (!mounted) return;
-    if (ok) await prefs.setSecurity('biometricEnabled', true);
+    if (ok) await security.setSecurity('biometricEnabled', true);
   }
 
-  Future<void> _togglePasscode(PreferencesProvider prefs) async {
-    if (prefs.passcodeEnabled) {
+  Future<void> _togglePasscode(SecurityProvider security) async {
+    if (security.passcodeEnabled) {
       final confirmed = await showPasscodeScreen(context,
           mode: PasscodeMode.verify,
           subtitle: 'Enter your current passcode to disable it');
       if (!mounted) return;
-      if (confirmed == true) await prefs.setSecurity('passcodeEnabled', false);
+      if (confirmed == true) await security.setSecurity('passcodeEnabled', false);
       return;
     }
     final set = await showPasscodeScreen(context, mode: PasscodeMode.setup);
     if (!mounted) return;
-    if (set == true) await prefs.setSecurity('passcodeEnabled', true);
+    if (set == true) await security.setSecurity('passcodeEnabled', true);
   }
 
   Future<void> _clearCache() async {
@@ -93,6 +94,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final prefs = context.watch<PreferencesProvider>();
+    final security = context.watch<SecurityProvider>();
     return Scaffold(
       backgroundColor: c.background,
       body: SafeArea(
@@ -138,15 +140,15 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     _toggleRow(
                       context,
                       const _Item('biometricEnabled', Icons.fingerprint, Color(0xFF4DFF91), 'Biometric Login', 'Use Face ID or fingerprint to unlock'),
-                      prefs.biometricEnabled,
-                      () => _toggleBiometric(prefs),
+                      security.biometricEnabled,
+                      () => _toggleBiometric(security),
                     ),
                     Divider(height: 1, color: c.borderDefault),
                     _toggleRow(
                       context,
                       const _Item('passcodeEnabled', Icons.lock_outline, Color(0xFFA8FF3E), 'Passcode Lock', 'Require a 6-digit passcode to open the app'),
-                      prefs.passcodeEnabled,
-                      () => _togglePasscode(prefs),
+                      security.passcodeEnabled,
+                      () => _togglePasscode(security),
                     ),
                   ]),
                 ),

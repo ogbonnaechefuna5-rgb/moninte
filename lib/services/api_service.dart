@@ -1,130 +1,52 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
+import 'api_client.dart';
+import 'auth_api.dart';
+import 'transaction_api.dart';
+import 'budget_api.dart';
+import 'savings_api.dart';
+import 'profile_api.dart';
+import 'analytics_api.dart';
 
-/// Injectable HTTP client for the Moninte API.
-///
-/// Register a single instance at the root provider and inject it into
-/// providers and screens via [context.read<ApiService>()].
+export 'api_client.dart';
+export 'auth_api.dart';
+export 'transaction_api.dart';
+export 'budget_api.dart';
+export 'savings_api.dart';
+export 'profile_api.dart';
+export 'analytics_api.dart';
+
+/// Facade that preserves the existing injection interface.
+/// Providers and screens continue to use [ApiService] unchanged.
+/// Inject individual domain APIs directly for new code.
 class ApiService {
-  final String baseUrl;
-  String _token = '';
-  Future<bool> Function()? onUnauthorized;
+  final ApiClient client;
+  late final AuthApi _auth;
+  late final TransactionApi _tx;
+  late final BudgetApi _budget;
+  late final SavingsApi _savings;
+  late final ProfileApi _profile;
+  late final AnalyticsApi _analytics;
 
-  ApiService({
-    String? baseUrl,
-  }) : baseUrl = baseUrl ??
-            const String.fromEnvironment(
-              'API_BASE',
-              defaultValue: 'http://172.20.10.2:8080/api/v1',
-            );
-
-  /// Resolves a relative path like /uploads/avatars/x.jpg to a full URL.
-  String resolveUrl(String path) {
-    if (path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    final host = baseUrl.replaceFirst(RegExp(r'/api/v1$'), '');
-    return '$host$path';
+  ApiService({String? baseUrl}) : client = ApiClient(baseUrl: baseUrl) {
+    _auth = AuthApi(client);
+    _tx = TransactionApi(client);
+    _budget = BudgetApi(client);
+    _savings = SavingsApi(client);
+    _profile = ProfileApi(client);
+    _analytics = AnalyticsApi(client);
   }
 
-  void setToken(String token) => _token = token;
+  // ── Token / auth state ──
+  void setToken(String token) => client.setToken(token);
+  String get baseUrl => client.baseUrl;
+  String resolveUrl(String path) => client.resolveUrl(path);
 
-  Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
-      };
-
-  Future<void> _handle401() async {
-    final refreshed = await onUnauthorized?.call() ?? false;
-    if (!refreshed) throw Exception('unauthorized');
-  }
-
-  // Raw post that bypasses the 401 interceptor — used for auth endpoints.
-  Future<Map<String, dynamic>> _postRaw(
-      String path, Map<String, dynamic> body) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
-    if (res.statusCode != 200 &&
-        res.statusCode != 201 &&
-        res.statusCode != 202) {
-      final b = jsonDecode(res.body);
-      throw Exception(b['error'] ?? 'Request failed');
-    }
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> _get(String path) async {
-    var res = await http.get(Uri.parse('$baseUrl$path'), headers: _headers);
-    if (res.statusCode == 401) {
-      await _handle401();
-      res = await http.get(Uri.parse('$baseUrl$path'), headers: _headers);
-    }
-    if (res.statusCode != 200) {
-      final body = jsonDecode(res.body);
-      throw Exception(body['error'] ?? 'Request failed');
-    }
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> _post(
-      String path, Map<String, dynamic> body) async {
-    var res = await http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
-    if (res.statusCode == 401) {
-      await _handle401();
-      res = await http.post(Uri.parse('$baseUrl$path'),
-          headers: _headers, body: jsonEncode(body));
-    }
-    if (res.statusCode != 200 &&
-        res.statusCode != 201 &&
-        res.statusCode != 202) {
-      final b = jsonDecode(res.body);
-      throw Exception(b['error'] ?? 'Request failed');
-    }
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
-
-  Future<void> _delete(String path) async {
-    var res = await http.delete(Uri.parse('$baseUrl$path'), headers: _headers);
-    if (res.statusCode == 401) {
-      await _handle401();
-      res =
-          await http.delete(Uri.parse('$baseUrl$path'), headers: _headers);
-    }
-    if (res.statusCode != 200) {
-      final b = jsonDecode(res.body);
-      throw Exception(b['error'] ?? 'Request failed');
-    }
-  }
-
-  Future<Map<String, dynamic>> _put(
-      String path, Map<String, dynamic> body) async {
-    var res = await http.put(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
-    if (res.statusCode == 401) {
-      await _handle401();
-      res = await http.put(Uri.parse('$baseUrl$path'),
-          headers: _headers, body: jsonEncode(body));
-    }
-    if (res.statusCode != 200) {
-      final b = jsonDecode(res.body);
-      throw Exception(b['error'] ?? 'Request failed');
-    }
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
+  set onUnauthorized(Future<bool> Function()? fn) =>
+      client.onUnauthorized = fn;
 
   // ── Auth ──
   Future<Map<String, dynamic>> login(String identifier, String password) =>
-      _postRaw('/auth/login', {'identifier': identifier, 'password': password});
+      _auth.login(identifier, password);
 
   Future<Map<String, dynamic>> signup({
     required String firstName,
@@ -134,81 +56,66 @@ class ApiService {
     required String password,
     String? email,
   }) =>
-      _postRaw('/auth/signup', {
-        'first_name': firstName,
-        if (middleName != null && middleName.isNotEmpty)
-          'middle_name': middleName,
-        'last_name': lastName,
-        'phone': phone,
-        'password': password,
-        if (email != null && email.isNotEmpty) 'email': email,
-      });
+      _auth.signup(
+        firstName: firstName,
+        middleName: middleName,
+        lastName: lastName,
+        phone: phone,
+        password: password,
+        email: email,
+      );
 
   Future<Map<String, dynamic>> refreshToken(String refreshToken) =>
-      _postRaw('/auth/refresh', {'refresh_token': refreshToken});
+      _auth.refreshToken(refreshToken);
 
   Future<Map<String, dynamic>> oidcLogin(
           {required String provider, required String idToken}) =>
-      _postRaw('/auth/oidc', {'provider': provider, 'id_token': idToken});
+      _auth.oidcLogin(provider: provider, idToken: idToken);
 
-  Future<void> logout(String? refreshToken) async {
-    try {
-      await _postRaw('/auth/logout', {
-        if (refreshToken != null) 'refresh_token': refreshToken,
-      });
-    } catch (_) {}
-  }
+  Future<void> logout(String? refreshToken) => _auth.logout(refreshToken);
 
-  // ── Categories ──
-  Future<Map<String, dynamic>> getCategories() => _get('/categories');
+  // ── Analytics / Categories / Dashboard / Health ──
+  Future<Map<String, dynamic>> getAnalytics(String period) =>
+      _analytics.getAnalytics(period);
+
+  Future<Map<String, dynamic>> getCategories() => _analytics.getCategories();
 
   Future<Map<String, dynamic>> getCategoryBreakdown() =>
-      _get('/categories/breakdown');
+      _analytics.getCategoryBreakdown();
 
-  Future<Map<String, dynamic>> getDashboard() => _get('/dashboard');
+  Future<Map<String, dynamic>> getDashboard() => _analytics.getDashboard();
 
-  // ── Analytics ──
-  Future<Map<String, dynamic>> getAnalytics(String period) =>
-      _get('/analytics?period=$period');
+  Future<Map<String, dynamic>> getHealthScore() => _analytics.getHealthScore();
 
   // ── Budgets ──
   Future<Map<String, dynamic>> getBudgets({int page = 1, int limit = 20}) =>
-      _get('/budgets?page=$page&limit=$limit');
+      _budget.getBudgets(page: page, limit: limit);
 
   Future<Map<String, dynamic>> createBudget(
           String category, double amount, String period) =>
-      _post('/budgets', {
-        'category': category,
-        'amount': amount,
-        'period': period,
-      });
+      _budget.createBudget(category, amount, period);
 
-  Future<void> deleteBudget(String id) => _delete('/budgets/$id');
+  Future<void> deleteBudget(String id) => _budget.deleteBudget(id);
 
   // ── Savings ──
-  Future<Map<String, dynamic>> getSavings() => _get('/savings');
+  Future<Map<String, dynamic>> getSavings() => _savings.getSavings();
 
   Future<Map<String, dynamic>> createGoal(
           String name, double targetAmount, String? deadline) =>
-      _post('/savings', {
-        'name': name,
-        'target_amount': targetAmount,
-        if (deadline != null) 'deadline': deadline,
-      });
+      _savings.createGoal(name, targetAmount, deadline);
 
-  Future<void> updateSavingsProgress(String id, double amount) async {
-    await _put('/savings/$id/progress', {'amount': amount});
-  }
+  Future<void> updateSavingsProgress(String id, double amount) =>
+      _savings.updateSavingsProgress(id, amount);
 
-  Future<void> deleteGoal(String id) => _delete('/savings/$id');
+  Future<void> deleteGoal(String id) => _savings.deleteGoal(id);
 
   // ── Transactions ──
   Future<Map<String, dynamic>> getTransactions(
           {int page = 1, int limit = 20}) =>
-      _get('/transactions?page=$page&limit=$limit');
+      _tx.getTransactions(page: page, limit: limit);
 
   Future<Map<String, dynamic>> ingestSMSBatch(List<String> messages) =>
-      _post('/transactions/ingest/sms/batch', {'messages': messages});
+      _tx.ingestSMSBatch(messages);
 
   Future<Map<String, dynamic>> ingestManual({
     required double amount,
@@ -217,101 +124,50 @@ class ApiService {
     String? category,
     String? description,
   }) =>
-      _post('/transactions/ingest/manual', {
-        'amount': amount,
-        'type': type,
-        'merchant': merchant,
-        if (category != null) 'category': category,
-        if (description != null) 'description': description,
-      });
+      _tx.ingestManual(
+        amount: amount,
+        type: type,
+        merchant: merchant,
+        category: category,
+        description: description,
+      );
 
-  Future<Map<String, dynamic>> uploadStatement(File file) async {
-    final uri = Uri.parse('$baseUrl/transactions/ingest/upload');
-    final req = http.MultipartRequest('POST', uri)
-      ..headers.addAll(_headers)
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
-    final streamed = await req.send();
-    final res = await http.Response.fromStream(streamed);
-    if (res.statusCode == 401) throw Exception('unauthorized');
-    if (res.statusCode != 200 &&
-        res.statusCode != 201 &&
-        res.statusCode != 202) {
-      final b = jsonDecode(res.body);
-      throw Exception(b['error'] ?? 'Upload failed');
-    }
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
+  Future<Map<String, dynamic>> uploadStatement(File file) =>
+      _tx.uploadStatement(file);
 
   // ── Profile ──
-  Future<Map<String, dynamic>> getProfile() => _get('/user/profile');
+  Future<Map<String, dynamic>> getProfile() => _profile.getProfile();
 
-  Future<String> uploadAvatar(File file) async {
-    final uri = Uri.parse('$baseUrl/user/avatar');
-    final req = http.MultipartRequest('POST', uri)
-      ..headers.addAll({'Authorization': 'Bearer $_token'})
-      ..files.add(await http.MultipartFile.fromPath('avatar', file.path));
-    final streamed = await req.send();
-    final res = await http.Response.fromStream(streamed);
-    if (res.statusCode == 401) {
-      final refreshed = await onUnauthorized?.call() ?? false;
-      if (!refreshed) throw Exception('unauthorized');
-      // retry
-      final req2 = http.MultipartRequest('POST', uri)
-        ..headers.addAll({'Authorization': 'Bearer $_token'})
-        ..files.add(await http.MultipartFile.fromPath('avatar', file.path));
-      final streamed2 = await req2.send();
-      final res2 = await http.Response.fromStream(streamed2);
-      final b = jsonDecode(res2.body);
-      if (res2.statusCode != 200) throw Exception(b['error'] ?? 'Upload failed');
-      return b['avatar_url'] as String;
-    }
-    if (res.statusCode != 200) {
-      final b = jsonDecode(res.body);
-      throw Exception(b['error'] ?? 'Upload failed');
-    }
-    return (jsonDecode(res.body) as Map<String, dynamic>)['avatar_url']
-        as String;
-  }
+  Future<void> updateProfile(Map<String, dynamic> data) =>
+      _profile.updateProfile(data);
 
-  Future<void> updateProfile(Map<String, dynamic> data) async {
-    await _put('/user/profile', data);
-  }
+  Future<void> changePassword(String oldPassword, String newPassword) =>
+      _profile.changePassword(oldPassword, newPassword);
 
-  Future<void> changePassword(
-      String oldPassword, String newPassword) async {
-    await _post('/user/change-password', {
-      'old_password': oldPassword,
-      'new_password': newPassword,
-    });
-  }
+  Future<void> deleteAccount() => _profile.deleteAccount();
 
-  Future<void> deleteAccount() => _delete('/user/account');
+  Future<String> uploadAvatar(File file) => _profile.uploadAvatar(file);
 
   // ── Preferences ──
-  Future<Map<String, dynamic>> getPreferences() => _get('/user/preferences');
+  Future<Map<String, dynamic>> getPreferences() => _profile.getPreferences();
 
   Future<void> savePreferences(Map<String, dynamic> prefs) =>
-      _put('/user/preferences', prefs);
+      _profile.savePreferences(prefs);
 
   // ── Linked Accounts ──
   Future<Map<String, dynamic>> getLinkedAccounts(
           {int page = 1, int limit = 20}) =>
-      _get('/user/linked-accounts?page=$page&limit=$limit');
+      _profile.getLinkedAccounts(page: page, limit: limit);
 
-  Future<void> syncAccount(String id) async {
-    await _post('/user/linked-accounts/$id/sync', {});
-  }
+  Future<void> syncAccount(String id) => _profile.syncAccount(id);
 
-  Future<void> removeAccount(String id) => _delete('/user/linked-accounts/$id');
+  Future<void> removeAccount(String id) => _profile.removeAccount(id);
 
   // ── Sessions ──
   Future<Map<String, dynamic>> getSessions({int page = 1, int limit = 20}) =>
-      _get('/user/sessions?page=$page&limit=$limit');
+      _profile.getSessions(page: page, limit: limit);
 
-  Future<void> revokeSession(String id) => _delete('/user/sessions/$id');
+  Future<void> revokeSession(String id) => _profile.revokeSession(id);
 
-  Future<void> revokeAllSessions() => _delete('/user/sessions');
-
-  // ── Health Score ──
-  Future<Map<String, dynamic>> getHealthScore() => _get('/health/score');
+  Future<void> revokeAllSessions() => _profile.revokeAllSessions();
 }

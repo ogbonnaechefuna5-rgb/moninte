@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/category_badge.dart';
-import '../providers/category_provider.dart';
+import '../widgets/transaction_tile.dart';
 import 'package:provider/provider.dart';
 import '../widgets/screen_header.dart';
 import '../services/api_service.dart';
-import '../utils/formatters.dart';
 import '../router.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -115,44 +113,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                 ));
                               }
                               final tx = _txs[i];
-                              final merchant = tx['merchant'] ?? 'Unknown';
-                              final category = tx['category'] ?? 'Other';
-                              final amount = (tx['amount'] as num).toDouble();
-                              final type = tx['type'] ?? 'debit';
-                              final date = tx['transaction_date'] as String? ?? '';
-                              final isCredit = type == 'credit';
                               return RepaintBoundary(
-                                child: GlassCard(
-                                  padding: const EdgeInsets.all(16),
-                                  blur: false,
-                                  child: Row(children: [
-                                    Container(
-                                      width: 44, height: 44,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        color: c.surfaceLight,
-                                      ),
-                                      child: Center(child: Text(_categoryIcon(category), style: const TextStyle(fontSize: 22))),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(merchant, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 4),
-                                      Row(children: [
-                                        CategoryBadge(category: category),
-                                        if (date.isNotEmpty) ...[ 
-                                          const SizedBox(width: 8),
-                                          Text(_formatDate(date), style: TextStyle(color: c.textSecondary, fontSize: 11)),
-                                        ],
-                                      ]),
-                                    ])),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${isCredit ? '+' : '-'}₦${fmtNumber(amount.abs().round())}',
-                                      style: AppTheme.monoSized(15, color: isCredit ? AppColors.success : AppColors.destructive),
-                                    ),
-                                  ]),
-                                ),
+                                child: TransactionTile(tx: tx),
                               );
                             },
                           ),
@@ -163,16 +125,4 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       ),
     );
   }
-
-  String _formatDate(String iso) {
-    try {
-      final d = DateTime.parse(iso);
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
-
-  String _categoryIcon(String category) =>
-      context.read<CategoryProvider>().forName(category).icon;
 }

@@ -11,6 +11,7 @@ import 'providers/dashboard_provider.dart';
 import 'providers/analytics_provider.dart';
 import 'providers/budget_provider.dart';
 import 'providers/savings_provider.dart';
+import 'providers/security_provider.dart';
 import 'services/api_service.dart';
 import 'router.dart';
 
@@ -60,6 +61,7 @@ class MoninteApp extends StatelessWidget {
           create: (ctx) => SavingsProvider(ctx.read<ApiService>()),
           update: (_, api, prev) => prev ?? SavingsProvider(api),
         ),
+        ChangeNotifierProvider(create: (_) => SecurityProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
       ],
       child: Consumer2<ThemeProvider, AuthProvider>(

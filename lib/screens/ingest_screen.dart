@@ -104,13 +104,22 @@ class _SmsTab extends StatefulWidget {
 
 class _SmsTabState extends State<_SmsTab> {
   List<SmsMessage> _messages = [];
-  final Set<int> _selected = {};
+  // ValueNotifier so toggling a checkbox only rebuilds the list + sync button,
+  // not the scan card, result banner, or count row.
+  final _selected = ValueNotifier<Set<int>>({});
   bool _loading = false;
   bool _sending = false;
   String? _result;
 
+  @override
+  void dispose() {
+    _selected.dispose();
+    super.dispose();
+  }
+
   Future<void> _scan() async {
-    setState(() { _loading = true; _result = null; _messages = []; _selected.clear(); });
+    setState(() { _loading = true; _result = null; _messages = []; });
+    _selected.value = {};
 
     final status = await Permission.sms.request();
     if (!mounted) return;
@@ -121,9 +130,9 @@ class _SmsTabState extends State<_SmsTab> {
 
     final msgs = await SmsService.getBankMessages();
     if (!mounted) return;
+    _selected.value = Set.from(List.generate(msgs.length, (i) => i));
     setState(() {
       _messages = msgs;
-      _selected.addAll(List.generate(msgs.length, (i) => i));
       _loading = false;
     });
   }
@@ -135,10 +144,11 @@ class _SmsTabState extends State<_SmsTab> {
     context.read<AnalyticsProvider>().load('week');
   }
 
-  Future<void> _send() async { 
-    if (_selected.isEmpty) return;
+  Future<void> _send() async {
+    final sel = _selected.value;
+    if (sel.isEmpty) return;
     setState(() { _sending = true; _result = null; });
-    final bodies = _selected.map((i) => _messages[i].body).toList();
+    final bodies = sel.map((i) => _messages[i].body).toList();
     try {
       final res = await context.read<ApiService>().ingestSMSBatch(bodies);
       if (!mounted) return;
@@ -210,66 +220,83 @@ class _SmsTabState extends State<_SmsTab> {
 
           if (_messages.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('${_messages.length} bank message${_messages.length != 1 ? 's' : ''} found',
-                  style: TextStyle(color: c.textSecondary, fontSize: 13)),
-              GestureDetector(
-                onTap: () => setState(() {
-                  if (_selected.length == _messages.length) {
-                    _selected.clear();
-                  } else {
-                    _selected.addAll(List.generate(_messages.length, (i) => i));
-                  }
-                }),
-                child: Text(
-                  _selected.length == _messages.length ? 'Deselect all' : 'Select all',
-                  style: TextStyle(color: c.accent, fontSize: 13),
-                ),
+            // Count row + select-all: reads _selected.value but doesn't need
+            // to be inside ValueListenableBuilder since it's rebuilt by setState
+            // when _messages changes (scan completes).
+            ValueListenableBuilder<Set<int>>(
+              valueListenable: _selected,
+              builder: (_, sel, __) => Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('${_messages.length} bank message${_messages.length != 1 ? 's' : ''} found',
+                      style: TextStyle(color: c.textSecondary, fontSize: 13)),
+                  GestureDetector(
+                    onTap: () {
+                      _selected.value = sel.length == _messages.length
+                          ? {}
+                          : Set.from(List.generate(_messages.length, (i) => i));
+                    },
+                    child: Text(
+                      sel.length == _messages.length ? 'Deselect all' : 'Select all',
+                      style: TextStyle(color: c.accent, fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
-            ]),
+            ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView.separated(
-                itemCount: _messages.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (_, i) {
-                  final msg = _messages[i];
-                  final selected = _selected.contains(i);
-                  return GestureDetector(
-                    onTap: () => setState(() => selected ? _selected.remove(i) : _selected.add(i)),
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(12),
-                      border: Border.all(color: selected ? c.accent.withValues(alpha: 0.4) : c.borderDefault),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Icon(
-                          selected ? Icons.check_box : Icons.check_box_outline_blank,
-                          size: 18,
-                          color: selected ? c.accent : c.textSecondary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(msg.address, style: TextStyle(color: c.accent, fontSize: 12, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text(msg.body, style: TextStyle(color: c.textPrimary, fontSize: 13), maxLines: 3, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${msg.date.day}/${msg.date.month}/${msg.date.year}',
-                            style: TextStyle(color: c.textSecondary, fontSize: 11),
+              child: ValueListenableBuilder<Set<int>>(
+                valueListenable: _selected,
+                builder: (_, sel, __) => ListView.separated(
+                  itemCount: _messages.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) {
+                    final msg = _messages[i];
+                    final selected = sel.contains(i);
+                    return GestureDetector(
+                      onTap: () {
+                        final next = Set<int>.from(sel);
+                        selected ? next.remove(i) : next.add(i);
+                        _selected.value = next;
+                      },
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(12),
+                        border: Border.all(color: selected ? c.accent.withValues(alpha: 0.4) : c.borderDefault),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Icon(
+                            selected ? Icons.check_box : Icons.check_box_outline_blank,
+                            size: 18,
+                            color: selected ? c.accent : c.textSecondary,
                           ),
-                        ])),
-                      ]),
-                    ),
-                  );
-                },
+                          const SizedBox(width: 10),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(msg.address, style: TextStyle(color: c.accent, fontSize: 12, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 4),
+                            Text(msg.body, style: TextStyle(color: c.textPrimary, fontSize: 13), maxLines: 3, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${msg.date.day}/${msg.date.month}/${msg.date.year}',
+                              style: TextStyle(color: c.textSecondary, fontSize: 11),
+                            ),
+                          ])),
+                        ]),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            _sending
-                ? Center(child: CircularProgressIndicator(color: c.accent))
-                : PrimaryButton(
-                    label: 'Sync ${_selected.length} Message${_selected.length != 1 ? 's' : ''}',
-                    onTap: _selected.isEmpty ? null : _send,
-                  ),
+            ValueListenableBuilder<Set<int>>(
+              valueListenable: _selected,
+              builder: (_, sel, __) => _sending
+                  ? Center(child: CircularProgressIndicator(color: c.accent))
+                  : PrimaryButton(
+                      label: 'Sync ${sel.length} Message${sel.length != 1 ? 's' : ''}',
+                      onTap: sel.isEmpty ? null : _send,
+                    ),
+            ),
             const SizedBox(height: 100),
           ] else if (!_loading) ...[
             const Spacer(),

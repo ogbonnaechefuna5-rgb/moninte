@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
-import 'providers/preferences_provider.dart';
+import 'providers/security_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth_screen.dart';
@@ -26,21 +26,21 @@ import 'theme/app_theme.dart';
 // ── Route names ───────────────────────────────────────────────────────────────
 
 class Routes {
-  static const splash        = '/splash';
-  static const loading       = '/loading';
-  static const auth          = '/auth';
-  static const onboarding    = '/onboarding';
-  static const home          = '/home';
-  static const analytics     = '/analytics';
-  static const budget        = '/budget';
-  static const savings       = '/savings';
-  static const ai            = '/ai';
-  static const ingest        = '/ingest';
-  static const transactions  = '/transactions';
-  static const profile       = '/profile';
+  static const splash         = '/splash';
+  static const loading        = '/loading';
+  static const auth           = '/auth';
+  static const onboarding     = '/onboarding';
+  static const home           = '/home';
+  static const analytics      = '/analytics';
+  static const budget         = '/budget';
+  static const savings        = '/savings';
+  static const ai             = '/ai';
+  static const ingest         = '/ingest';
+  static const transactions   = '/transactions';
+  static const profile        = '/profile';
   static const linkedAccounts = '/linked-accounts';
-  static const permissions   = '/permissions';
-  static const preferences   = '/preferences';
+  static const permissions    = '/permissions';
+  static const preferences    = '/preferences';
 }
 
 // ── Router factory ────────────────────────────────────────────────────────────
@@ -55,76 +55,53 @@ GoRouter buildRouter(AuthProvider auth, bool showSplash) {
       final expired = auth.sessionExpired;
       final loc = state.matchedLocation;
 
-      // While init is in flight, hold on the loading route.
       if (loading) return loc == Routes.loading ? null : Routes.loading;
-
-      // Init done — leave loading.
       if (loc == Routes.loading) return loggedIn ? Routes.home : Routes.auth;
-
-      // Session expired mid-use → send to auth with a query param.
       if (expired && loc != Routes.auth) return '${Routes.auth}?expired=1';
-
-      // Not logged in → auth screen (unless already there or on onboarding splash).
-      if (!loggedIn && loc != Routes.auth && loc != Routes.splash) {
-        return Routes.auth;
-      }
-
-      // Logged in but trying to visit auth → home.
+      if (!loggedIn && loc != Routes.auth && loc != Routes.splash) return Routes.auth;
       if (loggedIn && loc == Routes.auth) return Routes.home;
-
       return null;
     },
     routes: [
-      GoRoute(
-        path: Routes.splash,
-        builder: (_, __) => _SplashBridge(),
-      ),
-      GoRoute(
-        path: Routes.loading,
-        builder: (_, __) => const _LoadingScreen(),
-      ),
+      GoRoute(path: Routes.splash,   builder: (_, __) => _SplashBridge()),
+      GoRoute(path: Routes.loading,  builder: (_, __) => const _LoadingScreen()),
       GoRoute(
         path: Routes.auth,
         builder: (context, state) {
           final expired = state.uri.queryParameters['expired'] == '1';
           return AuthScreen(
-            sessionExpiredMessage: expired ? 'Your session has expired. Please log in again.' : null,
-            onComplete: ({bool isNewUser = false}) {
-              if (isNewUser) {
-                context.go(Routes.onboarding);
-              } else {
-                context.go(Routes.home);
-              }
-            },
+            sessionExpiredMessage: expired
+                ? 'Your session has expired. Please log in again.'
+                : null,
+            onComplete: ({bool isNewUser = false}) =>
+                context.go(isNewUser ? Routes.onboarding : Routes.home),
           );
         },
       ),
       GoRoute(
         path: Routes.onboarding,
-        builder: (context, _) => OnboardingScreen(
-          onComplete: () => context.go(Routes.home),
-        ),
+        builder: (context, _) =>
+            OnboardingScreen(onComplete: () => context.go(Routes.home)),
       ),
-      // Shell route: wraps all main tabs with the bottom nav + offline banner + lock screen.
       ShellRoute(
         builder: (context, state, child) => _AppShell(
           location: state.matchedLocation,
           child: child,
         ),
         routes: [
-          GoRoute(path: Routes.home,       builder: (_, __) => const DashboardScreen()),
-          GoRoute(path: Routes.analytics,  builder: (_, __) => const AnalyticsScreen()),
-          GoRoute(path: Routes.budget,     builder: (_, __) => const BudgetScreen()),
-          GoRoute(path: Routes.savings,    builder: (_, __) => const SavingsScreen()),
-          GoRoute(path: Routes.ai,         builder: (_, __) => const AIAssistantScreen()),
-          GoRoute(path: Routes.ingest,     builder: (context, _) => IngestScreen(
+          GoRoute(path: Routes.home,         builder: (_, __) => const DashboardScreen()),
+          GoRoute(path: Routes.analytics,    builder: (_, __) => const AnalyticsScreen()),
+          GoRoute(path: Routes.budget,       builder: (_, __) => const BudgetScreen()),
+          GoRoute(path: Routes.savings,      builder: (_, __) => const SavingsScreen()),
+          GoRoute(path: Routes.ai,           builder: (_, __) => const AIAssistantScreen()),
+          GoRoute(path: Routes.ingest,       builder: (context, _) => IngestScreen(
             onPickerActive: (active) => _AppShell.suppressLockOf(context, active),
           )),
           GoRoute(path: Routes.transactions, builder: (_, __) => const TransactionsScreen()),
-          GoRoute(path: Routes.profile,    builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: Routes.profile,      builder: (_, __) => const ProfileScreen()),
           GoRoute(path: Routes.linkedAccounts, builder: (_, __) => const LinkedAccountsScreen()),
-          GoRoute(path: Routes.permissions,   builder: (_, __) => const PermissionsScreen()),
-          GoRoute(path: Routes.preferences,   builder: (_, __) => const PreferencesScreen()),
+          GoRoute(path: Routes.permissions,  builder: (_, __) => const PermissionsScreen()),
+          GoRoute(path: Routes.preferences,  builder: (_, __) => const PreferencesScreen()),
         ],
       ),
     ],
@@ -132,17 +109,14 @@ GoRouter buildRouter(AuthProvider auth, bool showSplash) {
 }
 
 // ── Splash bridge ─────────────────────────────────────────────────────────────
-// Renders the onboarding splash then lets the redirect logic take over.
 
 class _SplashBridge extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return SplashScreen(onComplete: () => context.go(Routes.auth));
-  }
+  Widget build(BuildContext context) =>
+      SplashScreen(onComplete: () => context.go(Routes.auth));
 }
 
 // ── Loading screen ────────────────────────────────────────────────────────────
-// Shown on every non-first launch while AuthProvider.init() is in flight.
 
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen();
@@ -156,16 +130,14 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
-// ── Shell ─────────────────────────────────────────────────────────────────────
-// Owns the bottom nav, offline banner, lock screen, and lifecycle observer.
-// Replaces the old AppShell StatefulWidget.
+// ── App Shell ─────────────────────────────────────────────────────────────────
+// Composes bottom nav, offline banner, floating profile icon, and lock overlay.
 
 class _AppShell extends StatefulWidget {
   final String location;
   final Widget child;
   const _AppShell({required this.location, required this.child});
 
-  /// Lets child screens suppress the lock (e.g. while a file picker is open).
   static void suppressLockOf(BuildContext context, bool suppress) {
     context.findAncestorStateOfType<_AppShellState>()?._suppressLock = suppress;
   }
@@ -174,8 +146,7 @@ class _AppShell extends StatefulWidget {
   State<_AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
-  bool _locked = false;
+class _AppShellState extends State<_AppShell> {
   bool _suppressLock = false;
 
   static const _subRoutes = {
@@ -185,6 +156,68 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
     Routes.permissions,
     Routes.preferences,
   };
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final isSubRoute = _subRoutes.contains(widget.location);
+
+    return _LockOverlay(
+      suppressLock: _suppressLock,
+      child: Scaffold(
+        backgroundColor: c.background,
+        body: Stack(
+          children: [
+            widget.child,
+            const Positioned(
+              top: 0, left: 0, right: 0,
+              child: _OfflineBanner(),
+            ),
+            if (!isSubRoute && widget.location != Routes.profile)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                right: 16,
+                child: GestureDetector(
+                  onTap: () => context.go(Routes.profile),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.surfaceDark.withValues(alpha: 0.5),
+                      border: Border.all(color: c.borderDefault),
+                    ),
+                    child: Icon(Icons.person_outline, size: 20, color: c.textSecondary),
+                  ),
+                ),
+              ),
+            if (!isSubRoute)
+              Positioned(
+                left: 0, right: 0, bottom: 0,
+                child: BottomNav(location: widget.location),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Lock Overlay ──────────────────────────────────────────────────────────────
+// Owns the app-lock lifecycle: listens for pause/resume, prompts biometric
+// or passcode, and renders the locked UI. Extracted from _AppShell so the
+// lock concern is independently readable and testable.
+
+class _LockOverlay extends StatefulWidget {
+  final bool suppressLock;
+  final Widget child;
+  const _LockOverlay({required this.suppressLock, required this.child});
+
+  @override
+  State<_LockOverlay> createState() => _LockOverlayState();
+}
+
+class _LockOverlayState extends State<_LockOverlay> with WidgetsBindingObserver {
+  bool _locked = false;
 
   @override
   void initState() {
@@ -201,10 +234,10 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      if (_suppressLock) return;
-      final auth = context.read<AuthProvider>();
-      final prefs = context.read<PreferencesProvider>();
-      if (auth.isLoggedIn && (prefs.biometricEnabled || prefs.passcodeEnabled)) {
+      if (widget.suppressLock) return;
+      final auth     = context.read<AuthProvider>();
+      final security = context.read<SecurityProvider>();
+      if (auth.isLoggedIn && (security.biometricEnabled || security.passcodeEnabled)) {
         setState(() => _locked = true);
       }
     } else if (state == AppLifecycleState.resumed && _locked) {
@@ -213,12 +246,13 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _promptUnlock() async {
-    final prefs = context.read<PreferencesProvider>();
-    if (prefs.biometricEnabled) {
-      final ok = await BiometricService.authenticate(reason: 'Verify your identity to continue');
+    final security = context.read<SecurityProvider>();
+    if (security.biometricEnabled) {
+      final ok = await BiometricService.authenticate(
+          reason: 'Verify your identity to continue');
       if (!mounted) return;
       if (ok) setState(() => _locked = false);
-    } else if (prefs.passcodeEnabled) {
+    } else if (security.passcodeEnabled) {
       final ok = await showPasscodeScreen(context, mode: PasscodeMode.verify);
       if (!mounted) return;
       if (ok == true) setState(() => _locked = false);
@@ -227,76 +261,41 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    if (!_locked) return widget.child;
+
     final c = AppColors.of(context);
-
-    if (_locked) {
-      return Scaffold(
-        backgroundColor: c.background,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.lock_outline, size: 48, color: c.textSecondary),
-              const SizedBox(height: 16),
-              Text('App locked', style: TextStyle(color: c.textSecondary, fontSize: 16)),
-              const SizedBox(height: 24),
-              TextButton(
-                onPressed: _promptUnlock,
-                child: Text('Unlock', style: TextStyle(color: c.accent)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final isOnline = context.watch<ConnectivityProvider>().isOnline;
-    final isSubRoute = _subRoutes.contains(widget.location);
-
     return Scaffold(
       backgroundColor: c.background,
-      body: Stack(
-        children: [
-          widget.child,
-          if (!isOnline)
-            Positioned(
-              top: 0, left: 0, right: 0,
-              child: _OfflineBanner(),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 48, color: c.textSecondary),
+            const SizedBox(height: 16),
+            Text('App locked', style: TextStyle(color: c.textSecondary, fontSize: 16)),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: _promptUnlock,
+              child: Text('Unlock', style: TextStyle(color: c.accent)),
             ),
-          // Floating profile icon — visible on the four main tabs only.
-          if (!isSubRoute && widget.location != Routes.profile)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 12,
-              right: 16,
-              child: GestureDetector(
-                onTap: () => context.go(Routes.profile),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: c.surfaceDark.withValues(alpha: 0.5),
-                    border: Border.all(color: c.borderDefault),
-                  ),
-                  child: Icon(Icons.person_outline, size: 20, color: c.textSecondary),
-                ),
-              ),
-            ),
-          if (!isSubRoute)
-            Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: BottomNav(location: widget.location),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Offline banner ────────────────────────────────────────────────────────────
+// ── Offline Banner ────────────────────────────────────────────────────────────
+// Owns its own ConnectivityProvider watch so _AppShell never rebuilds
+// for connectivity changes — only this widget does.
 
 class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
   @override
   Widget build(BuildContext context) {
+    final isOnline = context.watch<ConnectivityProvider>().isOnline;
+    if (isOnline) return const SizedBox.shrink();
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -304,19 +303,18 @@ class _OfflineBanner extends StatelessWidget {
         color: const Color(0xFFFF3B30),
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 6,
-          bottom: 8,
-          left: 16,
-          right: 16,
+          bottom: 8, left: 16, right: 16,
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.wifi_off, size: 14, color: Colors.white),
             SizedBox(width: 6),
-            Text(
-              'No internet connection',
-              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-            ),
+            Text('No internet connection',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
           ],
         ),
       ),
